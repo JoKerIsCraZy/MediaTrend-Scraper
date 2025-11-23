@@ -18,7 +18,7 @@ from typing import List, Dict, Any
 
 # Global Instances
 app = FastAPI()
-security = HTTPBasic()
+security = HTTPBasic(auto_error=False)
 scheduler_service = None
 config = None
 
@@ -46,6 +46,13 @@ def check_auth(credentials: HTTPBasicCredentials = Depends(security)):
     """Checks the credentials if authentication is enabled."""
     if not config or not config.get("auth", {}).get("enabled", False):
         return True
+
+    if not credentials:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required",
+            headers={"WWW-Authenticate": "Basic"},
+        )
 
     correct_username = config["auth"]["username"]
     correct_password = config["auth"]["password"]
