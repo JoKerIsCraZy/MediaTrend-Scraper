@@ -7,8 +7,27 @@ A powerful tool to scrape Top 10 lists from various streaming services (Netflix,
 *   **Multi-Source Scraping**: Supports Netflix (official API) and FlixPatrol (for Disney+, Amazon Prime, HBO, etc.).
 *   **Radarr & Sonarr Integration**: Automatically adds found movies and series to your media library.
 *   **Web Interface**: User-friendly interface for configuration and manual control.
+*   **CLI Mode**: Interactive command-line interface for quick tasks.
 *   **Scheduler**: Automatic execution of scraping jobs according to a schedule.
 *   **Docker Support**: Easy deployment using Docker and Docker Compose.
+
+## Web Interface
+
+The web interface provides a modern dashboard to manage your settings, view logs, and trigger manual runs.
+
+![Web Interface Dashboard](webui_screenshot.png)
+
+## CLI Mode
+
+For users who prefer the terminal, the application offers an interactive CLI mode.
+
+**Usage:**
+```bash
+python main.py --cli
+```
+
+**Example Output:**
+![CLI Mode Example](cli_screenshot.png)
 
 ## Installation & Usage
 
@@ -35,12 +54,16 @@ The easiest way to run the scraper is using Docker.
     ```bash
     pip install -r requirements.txt
     ```
-3.  **Start**:
+3.  **Start Web Interface**:
     ```bash
     python main.py
     ```
-4.  **Access**:
-    The web interface is accessible at `http://localhost:8000`.
+    Access at `http://localhost:8000`.
+
+4.  **Start CLI Mode**:
+    ```bash
+    python main.py --cli
+    ```
 
 ## Configuration
 
