@@ -100,7 +100,7 @@ async def get_settings(authorized: bool = Depends(check_auth)):
 
 @app.post("/api/settings")
 async def update_settings(new_settings: Dict[str, Any], authorized: bool = Depends(check_auth)):
-    global config, scheduler_service
+    global config
     settings.save_settings(new_settings)
     config = settings.load_settings()
     

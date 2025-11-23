@@ -129,20 +129,6 @@ async def process_media_list(
             tvdb_id = await tmdb_get_tvdb_id(tmdb_key, tmdb_id)
             if not tvdb_id:
                 menu.log_warn(f"No TVDb ID found for '{title}' (TMDb: {tmdb_id}).")
-                continue
-            
-            if tvdb_id in existing_ids:
-                menu.log(f"'{title}' (TVDb: {tvdb_id}) is already in Sonarr. Skipping.")
-                continue
-
-            if await sonarr.sonarr_add_series(config, tvdb_id):
-                added_count += 1
-                existing_ids[tvdb_id] = True
-
-    menu.log(f"{source_name} -> {target_name} Task finished. {added_count} new entries added.")
-
-
-# --- Wrapper for the Menu ---
 
 def show_run_menu(config: Dict[str, Any]) -> None:
     """Shows the menu to execute jobs."""
