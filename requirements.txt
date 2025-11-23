@@ -1,0 +1,10 @@
+requests
+aiohttp
+fastapi
+uvicorn
+apscheduler
+jinja2
+beautifulsoup4
+lxml
+
+beautifulsoup4

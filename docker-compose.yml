@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  media-top-lists:
+    build: .
+    container_name: media-top-lists
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./settings.json:/app/settings.json
+    restart: unless-stopped

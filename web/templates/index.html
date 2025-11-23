@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Media Top-Listen Manager</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0f1115;
+            --sidebar-bg: #161920;
+            --card-bg: #1e222b;
+            --text-primary: #ffffff;
+            --text-secondary: #9ca3af;
+            --accent-color: #6366f1;
+            --border-color: #2d3340;
+            --success-color: #10b981;
+            --error-color: #ef4444;
+
+            /* Platform Colors */
+            --netflix-color: #e50914;
+            --amazon-color: #00a8e1;
+            --disney-color: #113ccf;
+            --hbo-color: #5d2884;
+            --hulu-color: #1ce783;
+            --peacock-color: #000000;
+            --paramount-color: #0064ff;
+            --apple-color: #A2AAAD;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 260px;
+            background-color: var(--sidebar-bg);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+        }
+
+        .brand {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 40px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .nav-item {
+            padding: 12px 15px;
+            margin-bottom: 5px;
+            border-radius: 8px;
+            cursor: pointer;
+            color: var(--text-secondary);
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 500;
+        }
+
+        .nav-item:hover,
+        .nav-item.active {
+            background-color: rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
+        }
+
+        .nav-item.active {
+            background-color: rgba(99, 102, 241, 0.1);
+            color: var(--accent-color);
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            padding: 40px;
+            overflow-y: auto;
+        }
+
+        .view {
+            display: none;
+        }
+
+        .view.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        p.subtitle {
+            color: var(--text-secondary);
+            margin-bottom: 30px;
+        }
+
+        /* Platform Cards Grid */
+        .platforms-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .platform-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            transition: transform 0.2s, border-color 0.2s;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .platform-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--accent-color);
+        }
+
+        .platform-header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 60px;
+        }
+
+        .platform-logo {
+            font-size: 1.5rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .platform-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .action-btn {
+            background-color: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .action-btn:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            border-color: var(--text-secondary);
+        }
+
+        .action-btn.full-width {
+            grid-column: 1 / -1;
+            background-color: rgba(99, 102, 241, 0.1);
+            color: var(--accent-color);
+            border-color: rgba(99, 102, 241, 0.2);
+        }
+
+        .action-btn.full-width:hover {
+            background-color: rgba(99, 102, 241, 0.2);
+        }
+
+        .action-btn.running {
+            opacity: 0.7;
+            cursor: wait;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                opacity: 0.7;
+            }
+
+            50% {
+                opacity: 0.4;
+            }
+
+            100% {
+                opacity: 0.7;
+            }
+        }
+
+        /* Forms & Settings */
+        .settings-section {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border-color);
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            cursor: pointer;
+        }
+
+        .section-header h3 {
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .section-body {
+            display: none;
+        }
+
+        .section-body.open {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .form-control {
+            width: 100%;
+            background-color: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border-color);
+            padding: 10px 12px;
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-family: inherit;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--accent-color);
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background-color: var(--accent-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #4f46e5;
+        }
+
+        .btn-secondary {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background-color: rgba(255, 255, 255, 0.15);
+        }
+
+        /* Country Selector */
+        .chip-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .select-chip {
+            background-color: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            padding: 6px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            user-select: none;
+        }
+
+        .select-chip.selected {
+            background-color: var(--accent-color);
+            border-color: var(--accent-color);
+            color: white;
+        }
+
+        /* Logs */
+        .log-console {
+            background-color: #000;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 15px;
+            font-family: 'Consolas', monospace;
+            font-size: 0.9rem;
+            color: #d1d5db;
+            height: 500px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            transform: translateY(100px);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 1000;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+        }
+
+        .toast.success {
+            border-left: 4px solid var(--success-color);
+        }
+
+        .toast.error {
+            border-left: 4px solid var(--error-color);
+        }
+
+        /* Status Indicator */
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+
+        .status-indicator.running {
+            background-color: var(--success-color);
+            box-shadow: 0 0 8px var(--success-color);
+        }
+
+        .status-indicator.stopped {
+            background-color: var(--error-color);
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s;
+            z-index: 2000;
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-content {
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+            transform: scale(0.9);
+            transition: transform 0.3s;
+        }
+
+        .modal-overlay.show .modal-content {
+            transform: scale(1);
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="sidebar">
+        <div class="brand">
+            <span>🚀</span> Media Manager
+        </div>
+        <div class="nav-item active" onclick="switchView('dashboard')"><span>📊</span>Dashboard </div>
+        <div class="nav-item" onclick="switchView('settings')"><span>⚙️</span>Einstellungen </div>
+        <div class="nav-item" onclick="switchView('logs')"><span>📝</span>Logs </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Dashboard View -->
+        <div id="dashboard" class="view active">
+            <h1>Dashboard</h1>
+            <p class="subtitle">Verwalte deine Streaming-Top-Listen</p>
+            <div id="platforms-container" class="platforms-grid">
+                <!-- Cards will be injected here -->
+                <div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-secondary);">Lade
+                    Plattformen... </div>
+            </div>
+        </div>
+
+        <!-- Settings View -->
+        <div id="settings" class="view">
+            <h1>Einstellungen</h1>
+            <p class="subtitle">Konfiguriere APIs und Zeitpläne</p>
+
+            <div class="settings-section">
+                <div class="section-header" onclick="toggleSection(this)">
+                    <h3>Allgemein</h3><span>▼</span>
+                </div>
+                <div class="section-body open">
+                    <div class="form-group">
+                        <label>TMDb API Key</label>
+                        <input type="text" id="tmdb_api_key" class="form-control" placeholder="TMDb API Key eingeben">
+                    </div>
+                    <div class="form-group">
+                        <label>Länder</label>
+                        <div id="country-selector" class="chip-container">
+                            <!-- Countries injected here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <div class="section-header" onclick="toggleSection(this)">
+                    <h3>Zeitplaner (Scheduler)</h3><span>▼</span>
+                </div>
+                <div class="section-body open">
+                    <div style="margin-bottom: 15px; display: flex; align-items: center;">
+                        <div id="scheduler-status-dot" class="status-indicator stopped"></div>
+                        <span id="scheduler-status-text" style="color: var(--text-secondary);">Lädt...</span>
+                        <span style="margin-left: auto; font-size: 0.9rem; color: var(--text-secondary);">Jobs: <span
+                                id="job-count">0</span></span>
+                    </div>
+                    <div id="scheduler-settings-container">
+                        <!-- Scheduler rows injected here -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <div class="section-header" onclick="toggleSection(this)">
+                    <h3>Radarr</h3><span>▶</span>
+                </div>
+                <div class="section-body">
+                    <div class="form-group">
+                        <label>URL</label>
+                        <input type="text" id="radarr_url" class="form-control" placeholder="http://localhost:7878">
+                    </div>
+                    <div class="form-group">
+                        <label>API Key</label>
+                        <input type="text" id="radarr_api_key" class="form-control">
+                    </div>
+                    <button class="btn btn-secondary" onclick="fetchRadarrData()"
+                        style="margin-bottom: 15px; width: 100%;">Verbindung testen & Daten laden</button>
+                    <div class="form-group">
+                        <label>Qualitätsprofil</label>
+                        <select id="radarr_profile" class="form-control"></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Root Folder</label>
+                        <select id="radarr_folder" class="form-control"></select>
+                    </div>
+                    <div class="form-group">
+                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                            <input type="checkbox" id="radarr_search">Suche starten beim Hinzufügen
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <div class="section-header" onclick="toggleSection(this)">
+                    <h3>Sonarr</h3><span>▶</span>
+                </div>
+                <div class="section-body">
+                    <div class="form-group">
+                        <label>URL</label>
+                        <input type="text" id="sonarr_url" class="form-control" placeholder="http://localhost:8989">
+                    </div>
+                    <div class="form-group">
+                        <label>API Key</label>
+                        <input type="text" id="sonarr_api_key" class="form-control">
+                    </div>
+                    <button class="btn btn-secondary" onclick="fetchSonarrData()"
+                        style="margin-bottom: 15px; width: 100%;">Verbindung testen & Daten laden</button>
+                    <div class="form-group">
+                        <label>Qualitätsprofil</label>
+                        <select id="sonarr_profile" class="form-control"></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Root Folder</label>
+                        <select id="sonarr_folder" class="form-control"></select>
+                    </div>
+                    <div class="form-group">
+                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                            <input type="checkbox" id="sonarr_search">Suche starten beim Hinzufügen
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div style="text-align: right; margin-top: 20px;">
+                <button class="btn btn-primary" onclick="saveSettings()">Einstellungen speichern</button>
+            </div>
+        </div>
+
+        <!-- Logs View -->
+        <div id="logs" class="view">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h1>System Logs</h1>
+                <button class="btn btn-secondary" onclick="updateLogs()">Aktualisieren</button>
+            </div>
+            <div id="log-box" class="log-console">Lade Logs...</div>
+        </div>
+    </main>
+
+    <div id="toast" class="toast">Nachricht</div>
+
+    <!-- Confirm Modal -->
+    <div id="confirm-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 style="margin-bottom: 10px;">Bestätigung</h3>
+            <p id="modal-message" style="color: var(--text-secondary);">Bist du sicher?</p>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeModal(false)">Abbrechen</button>
+                <button class="btn btn-primary" onclick="closeModal(true)">Starten</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        window.onerror = function (msg, url, line, col, error) {
+            alert("Error: " + msg + "\nurl: " + url + "\nline: " + line);
+            return false;
+        };
+
+        let currentSettings = {};
+        let constants = {};
+
+        // --- Navigation ---
+        function switchView(viewId) {
+            document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            document.getElementById(viewId).classList.add('active');
+
+            // Highlight nav item
+            const navItems = document.querySelectorAll('.nav-item');
+            if (viewId === 'dashboard') navItems[0].classList.add('active');
+            if (viewId === 'settings') navItems[1].classList.add('active');
+            if (viewId === 'logs') navItems[2].classList.add('active');
+        }
+
+        function toggleSection(header) {
+            const body = header.nextElementSibling;
+            body.classList.toggle('open');
+            header.querySelector('span').textContent = body.classList.contains('open') ? '▼' : '▶';
+        }
+
+        function showToast(msg, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.className = 'toast show ' + type;
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        // --- Data Loading ---
+        async function loadInitialData() {
+            try {
+                // Constants
+                const constRes = await fetch('/api/constants');
+                constants = await constRes.json();
+                renderCountrySelector();
+
+                // Platforms (Fetch if not in constants)
+                if (!constants.platforms) {
+                    const platRes = await fetch('/api/platforms');
+                    constants.platforms = await platRes.json();
+                }
+
+                renderDashboardCards();
+
+                // Settings
+                const setRes = await fetch('/api/settings');
+                currentSettings = await setRes.json();
+                populateSettingsForm();
+
+                // Status
+                updateStatus();
+                updateLogs();
+            } catch (e) {
+                showToast("Fehler beim Laden der Daten", "error");
+                console.error(e);
+            }
+        }
+
+        function renderDashboardCards() {
+            const container = document.getElementById('platforms-container');
+            container.innerHTML = '';
+
+            if (!constants.platforms) return;
+
+            constants.platforms.forEach(p => {
+                const card = document.createElement('div');
+                card.className = 'platform-card';
+
+                // Determine color variable based on ID
+                const colorVar = `var(--${p.id}-color, var(--accent-color))`;
+
+                card.innerHTML = `
+                    <div class="platform-header">
+                        <div class="platform-logo" style="color: ${colorVar};">${p.name}</div>
+                    </div>
+                    <div class="platform-actions">
+                        <button class="action-btn" onclick="triggerJob('${p.id}_movies', this)">
+                            <span>🎬</span> Filme
+                        </button>
+                        <button class="action-btn" onclick="triggerJob('${p.id}_series', this)">
+                            <span>📺</span> Serien
+                        </button>
+                        <button class="action-btn full-width" onclick="triggerJob('${p.id}_all', this)">
+                            <span>🚀</span> Beide ausführen
+                        </button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function renderCountrySelector() {
+            const container = document.getElementById('country-selector');
+            container.innerHTML = '';
+
+            if (constants.countries) {
+                constants.countries.forEach(c => {
+                    const chip = document.createElement('div');
+                    chip.className = 'select-chip';
+                    chip.textContent = c.name;
+                    chip.dataset.code = c.code;
+
+                    chip.onclick = () => {
+                        chip.classList.toggle('selected');
+                    };
+                    container.appendChild(chip);
+                });
+            }
+        }
+
+        function populateSettingsForm() {
+            // General
+            document.getElementById('tmdb_api_key').value = currentSettings?.general?.tmdb_api_key || '';
+
+            const selectedCountries = currentSettings?.general?.countries || [];
+            document.querySelectorAll('.select-chip').forEach(chip => {
+                if (selectedCountries.includes(chip.dataset.code)) {
+                    chip.classList.add('selected');
+                }
+            });
+
+            // Scheduler
+            renderSchedulerSettings();
+
+            // Radarr
+            document.getElementById('radarr_url').value = currentSettings?.radarr?.url || '';
+            document.getElementById('radarr_api_key').value = currentSettings?.radarr?.api_key || '';
+            document.getElementById('radarr_search').checked = currentSettings?.radarr?.search_on_add;
+
+            // Pre-fill dropdowns if we have IDs, but we might need to fetch options first.
+            if (currentSettings?.radarr?.url && currentSettings?.radarr?.api_key) {
+                fetchRadarrData(true); // silent fetch
+            }
+
+            // Sonarr
+            document.getElementById('sonarr_url').value = currentSettings?.sonarr?.url || '';
+            document.getElementById('sonarr_api_key').value = currentSettings?.sonarr?.api_key || '';
+            document.getElementById('sonarr_search').checked = currentSettings?.sonarr?.search_on_add;
+
+            if (currentSettings?.sonarr?.url && currentSettings?.sonarr?.api_key) {
+                fetchSonarrData(true); // silent fetch
+            }
+        }
+
+        function renderSchedulerSettings() {
+            const container = document.getElementById('scheduler-settings-container');
+            container.innerHTML = '';
+
+            const jobs = currentSettings?.scheduler?.jobs || {};
+
+            if (constants.platforms) {
+                _renderSchedulerRows(container, jobs, constants.platforms);
+            }
+        }
+
+        function _renderSchedulerRows(container, jobs, platforms) {
+            if (!platforms) return;
+
+            platforms.forEach(p => {
+                // Movies
+                const movieKey = `${p.id}_movies`;
+                const movieJob = jobs[movieKey] || { enabled: false, time: "04:00" };
+
+                // Series
+                const seriesKey = `${p.id}_series`;
+                const seriesJob = jobs[seriesKey] || { enabled: false, time: "04:15" };
+
+                const row = document.createElement('div');
+                row.style.marginBottom = "15px";
+                row.style.padding = "15px";
+                row.style.backgroundColor = "rgba(255,255,255,0.02)";
+                row.style.border = "1px solid var(--border-color)";
+                row.style.borderRadius = "8px";
+
+                row.innerHTML = `
+                    <h4 style="margin-bottom: 15px; color: var(--${p.id}-color, var(--accent-color)); font-weight: 700;">${p.name}</h4>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                        <!-- Movies -->
+                        <div>
+                            <label style="display:flex; align-items:center; gap: 10px; margin-bottom: 8px; cursor: pointer;">
+                                <input type="checkbox" class="sched-enable" data-key="${movieKey}" ${movieJob.enabled ? 'checked' : ''}>
+                                <span style="font-weight: 500;">Filme aktivieren</span>
+                            </label>
+                            <input type="time" class="form-control sched-time" data-key="${movieKey}" value="${movieJob.time}">
+                        </div>
+                        <!-- Series -->
+                        <div>
+                            <label style="display:flex; align-items:center; gap: 10px; margin-bottom: 8px; cursor: pointer;">
+                                <input type="checkbox" class="sched-enable" data-key="${seriesKey}" ${seriesJob.enabled ? 'checked' : ''}>
+                                <span style="font-weight: 500;">Serien aktivieren</span>
+                            </label>
+                            <input type="time" class="form-control sched-time" data-key="${seriesKey}" value="${seriesJob.time}">
+                        </div>
+                    </div>
+                `;
+                container.appendChild(row);
+            });
+        }
+
+        async function fetchRadarrData(silent = false) {
+            const url = document.getElementById('radarr_url').value;
+            const key = document.getElementById('radarr_api_key').value;
+            if (!url || !key) return;
+
+            if (!silent) showToast("Verbinde mit Radarr...", "success");
+
+            try {
+                // Profiles
+                const pRes = await fetch('/api/radarr/profiles', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url, api_key: key })
+                });
+                const profiles = await pRes.json();
+
+                const pSelect = document.getElementById('radarr_profile');
+                pSelect.innerHTML = '';
+                if (profiles.error) throw new Error(profiles.error);
+
+                profiles.forEach(p => {
+                    const opt = document.createElement('option');
+                    opt.value = p.id;
+                    opt.textContent = p.name;
+                    pSelect.appendChild(opt);
+                });
+                pSelect.value = currentSettings?.radarr?.quality_profile_id;
+
+                // Folders
+                const fRes = await fetch('/api/radarr/folders', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url, api_key: key })
+                });
+                const folders = await fRes.json();
+
+                const fSelect = document.getElementById('radarr_folder');
+                fSelect.innerHTML = '';
+                if (folders.error) throw new Error(folders.error);
+
+                folders.forEach(f => {
+                    const opt = document.createElement('option');
+                    opt.value = f.path;
+                    opt.textContent = f.path;
+                    fSelect.appendChild(opt);
+                });
+                fSelect.value = currentSettings?.radarr?.root_folder_path;
+
+                if (!silent) showToast("Radarr Daten geladen!", "success");
+            } catch (e) {
+                if (!silent) showToast("Fehler bei Radarr Verbindung: " + e.message, "error");
+            }
+        }
+
+        async function fetchSonarrData(silent = false) {
+            const url = document.getElementById('sonarr_url').value;
+            const key = document.getElementById('sonarr_api_key').value;
+            if (!url || !key) return;
+
+            if (!silent) showToast("Verbinde mit Sonarr...", "success");
+
+            try {
+                // Profiles
+                const pRes = await fetch('/api/sonarr/profiles', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url, api_key: key })
+                });
+                const profiles = await pRes.json();
+
+                const pSelect = document.getElementById('sonarr_profile');
+                pSelect.innerHTML = '';
+                if (profiles.error) throw new Error(profiles.error);
+
+                profiles.forEach(p => {
+                    const opt = document.createElement('option');
+                    opt.value = p.id;
+                    opt.textContent = p.name;
+                    pSelect.appendChild(opt);
+                });
+                pSelect.value = currentSettings?.sonarr?.quality_profile_id;
+
+                // Folders
+                const fRes = await fetch('/api/sonarr/folders', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url, api_key: key })
+                });
+                const folders = await fRes.json();
+
+                const fSelect = document.getElementById('sonarr_folder');
+                fSelect.innerHTML = '';
+                if (folders.error) throw new Error(folders.error);
+
+                folders.forEach(f => {
+                    const opt = document.createElement('option');
+                    opt.value = f.path;
+                    opt.textContent = f.path;
+                    fSelect.appendChild(opt);
+                });
+                fSelect.value = currentSettings?.sonarr?.root_folder_path;
+
+                if (!silent) showToast("Sonarr Daten geladen!", "success");
+            } catch (e) {
+                if (!silent) showToast("Fehler bei Sonarr Verbindung: " + e.message, "error");
+            }
+        }
+
+        async function saveSettings() {
+            // Collect Scheduler Data
+            const schedulerJobs = {};
+
+            document.querySelectorAll('.sched-enable').forEach(cb => {
+                const key = cb.dataset.key;
+                const timeInput = document.querySelector(`.sched-time[data-key="${key}"]`);
+                schedulerJobs[key] = {
+                    enabled: cb.checked,
+                    time: timeInput.value
+                };
+            });
+
+            const newSettings = {
+                general: {
+                    tmdb_api_key: document.getElementById('tmdb_api_key').value,
+                    countries: Array.from(document.querySelectorAll('.select-chip.selected')).map(c => c.dataset.code)
+                },
+                scheduler: {
+                    jobs: schedulerJobs
+                },
+                radarr: {
+                    url: document.getElementById('radarr_url').value,
+                    api_key: document.getElementById('radarr_api_key').value,
+                    quality_profile_id: parseInt(document.getElementById('radarr_profile').value) || 1,
+                    root_folder_path: document.getElementById('radarr_folder').value,
+                    search_on_add: document.getElementById('radarr_search').checked
+                },
+                sonarr: {
+                    url: document.getElementById('sonarr_url').value,
+                    api_key: document.getElementById('sonarr_api_key').value,
+                    quality_profile_id: parseInt(document.getElementById('sonarr_profile').value) || 1,
+                    root_folder_path: document.getElementById('sonarr_folder').value,
+                    search_on_add: document.getElementById('sonarr_search').checked
+                }
+            };
+
+            try {
+                const res = await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(newSettings)
+                });
+                const data = await res.json();
+
+                if (data.status === 'success') {
+                    showToast("Einstellungen gespeichert!", "success");
+                    currentSettings = newSettings;
+                } else {
+                    showToast("Fehler beim Speichern", "error");
+                }
+            } catch (e) {
+                showToast("Netzwerkfehler beim Speichern", "error");
+            }
+        }
+
+        async function updateStatus() {
+            try {
+                const res = await fetch('/api/status');
+                const data = await res.json();
+                const statusEl = document.getElementById('scheduler-status-dot');
+                const statusText = document.getElementById('scheduler-status-text');
+
+                if (data.scheduler_running) {
+                    statusEl.className = "status-indicator running";
+                    statusText.textContent = "Aktiv";
+                } else {
+                    statusEl.className = "status-indicator stopped";
+                    statusText.textContent = "Gestoppt";
+                }
+
+                document.getElementById('job-count').textContent = data.job_count;
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function updateLogs() {
+            try {
+                const res = await fetch('/api/logs');
+                const data = await res.json();
+                const logBox = document.getElementById('log-box');
+                const wasAtBottom = logBox.scrollHeight - logBox.scrollTop === logBox.clientHeight;
+
+                logBox.textContent = data.logs.join('\n');
+
+                if (wasAtBottom) logBox.scrollTop = logBox.scrollHeight;
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        let modalResolve = null;
+
+        function showConfirmModal(msg) {
+            return new Promise((resolve) => {
+                document.getElementById('modal-message').textContent = msg;
+                document.getElementById('confirm-modal').classList.add('show');
+                modalResolve = resolve;
+            });
+        }
+
+        function closeModal(result) {
+            document.getElementById('confirm-modal').classList.remove('show');
+            if (modalResolve) {
+                modalResolve(result);
+                modalResolve = null;
+            }
+        }
+
+        async function triggerJob(jobId, btnElement, silent = false) {
+            console.log(`Triggering job: ${jobId}, silent: ${silent}`);
+
+            // Handle "all" trigger separately
+            if (jobId.endsWith('_all')) {
+                const baseId = jobId.replace('_all', '');
+                const confirmed = await showConfirmModal(`Wirklich Filme UND Serien für ${baseId} starten?`);
+                if (!confirmed) return;
+
+                // Trigger both sequentially
+                await triggerJob(`${baseId}_movies`, btnElement, true); // silent confirm
+                await triggerJob(`${baseId}_series`, btnElement, true);
+                return;
+            }
+
+            if (!silent) {
+                const confirmed = await showConfirmModal(`Job '${jobId}' wirklich starten?`);
+                if (!confirmed) return;
+            }
+
+            // Button animation
+            if (btnElement) btnElement.classList.add('running');
+
+            try {
+                const res = await fetch(`/api/run/${jobId}`, { method: 'POST' });
+                const data = await res.json();
+                showToast(data.message, data.status === 'success' ? 'success' : 'error');
+                updateLogs();
+            } catch (e) {
+                console.error(e);
+                showToast("Fehler beim Starten des Jobs", "error");
+            } finally {
+                if (btnElement) setTimeout(() => btnElement.classList.remove('running'), 2000);
+            }
+        }
+
+        // Init
+        setInterval(updateStatus, 5000);
+        setInterval(updateLogs, 3000);
+        loadInitialData();
+    </script>
+</body>
+
+</html>
