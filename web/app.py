@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 import os
 import asyncio
-from fastapi import FastAPI, Request, BackgroundTasks
+from fastapi import FastAPI, Request, BackgroundTasks, Depends, HTTPException, status
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -17,6 +18,7 @@ from typing import List, Dict, Any
 
 # Global Instances
 app = FastAPI()
+security = HTTPBasic()
 scheduler_service = None
 config = None
 
@@ -40,6 +42,24 @@ utils.menu.log_warn = lambda m: web_logger(f"[WARN] {m}")
 utils.menu.log_error = lambda m: web_logger(f"[ERROR] {m}")
 
 
+def check_auth(credentials: HTTPBasicCredentials = Depends(security)):
+    """Checks the credentials if authentication is enabled."""
+    if not config or not config.get("auth", {}).get("enabled", False):
+        return True
+
+    correct_username = config["auth"]["username"]
+    correct_password = config["auth"]["password"]
+
+    # Simple string comparison (in production, use constant-time comparison)
+    if credentials.username != correct_username or credentials.password != correct_password:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+            headers={"WWW-Authenticate": "Basic"},
+        )
+    return True
+
+
 @app.on_event("startup")
 async def startup_event():
     global scheduler_service, config
@@ -55,11 +75,11 @@ async def shutdown_event():
     web_logger("Webserver stopped.")
 
 @app.get("/", response_class=HTMLResponse)
-async def read_root(request: Request):
+async def read_root(request: Request, authorized: bool = Depends(check_auth)):
     return templates.TemplateResponse("index.html", {"request": request})
 
 @app.get("/api/status")
-async def get_status():
+async def get_status(authorized: bool = Depends(check_auth)):
     jobs = scheduler_service.get_jobs() if scheduler_service else []
     return {
         "scheduler_running": scheduler_service.scheduler.running if scheduler_service else False,
@@ -67,7 +87,7 @@ async def get_status():
     }
 
 @app.get("/api/logs")
-async def get_logs():
+async def get_logs(authorized: bool = Depends(check_auth)):
     return {"logs": LOG_BUFFER}
 
 
@@ -75,11 +95,11 @@ async def get_logs():
 # --- Settings API ---
 
 @app.get("/api/settings")
-async def get_settings():
+async def get_settings(authorized: bool = Depends(check_auth)):
     return settings.load_settings()
 
 @app.post("/api/settings")
-async def update_settings(new_settings: Dict[str, Any]):
+async def update_settings(new_settings: Dict[str, Any], authorized: bool = Depends(check_auth)):
     global config, scheduler_service
     settings.save_settings(new_settings)
     config = settings.load_settings()
@@ -92,11 +112,11 @@ async def update_settings(new_settings: Dict[str, Any]):
     return {"status": "success", "message": "Settings saved."}
 
 @app.get("/api/platforms")
-async def get_platforms():
+async def get_platforms(authorized: bool = Depends(check_auth)):
     return settings.SUPPORTED_PLATFORMS
 
 @app.post("/api/run/{job_key}")
-async def run_job(job_key: str, background_tasks: BackgroundTasks):
+async def run_job(job_key: str, background_tasks: BackgroundTasks, authorized: bool = Depends(check_auth)):
     if not scheduler_service:
         return {"message": "Scheduler not initialized.", "status": "error"}
     
@@ -105,7 +125,7 @@ async def run_job(job_key: str, background_tasks: BackgroundTasks):
     return {"message": f"Job '{job_key}' started.", "status": "success"}
 
 @app.get("/api/constants")
-async def get_constants():
+async def get_constants(authorized: bool = Depends(check_auth)):
     return {
         "countries": settings.COMMON_COUNTRIES
     }
@@ -117,7 +137,7 @@ class ServiceConfig(BaseModel):
     api_key: str
 
 @app.post("/api/radarr/profiles")
-async def get_radarr_profiles(cfg: ServiceConfig):
+async def get_radarr_profiles(cfg: ServiceConfig, authorized: bool = Depends(check_auth)):
     try:
         profiles = await radarr.radarr_get_quality_profiles(cfg.url, cfg.api_key)
         return profiles
@@ -125,7 +145,7 @@ async def get_radarr_profiles(cfg: ServiceConfig):
         return {"error": str(e)}
 
 @app.post("/api/radarr/folders")
-async def get_radarr_folders(cfg: ServiceConfig):
+async def get_radarr_folders(cfg: ServiceConfig, authorized: bool = Depends(check_auth)):
     try:
         folders = await radarr.radarr_get_root_folders(cfg.url, cfg.api_key)
         # Radarr returns strings, we convert to objects for consistency
@@ -134,7 +154,7 @@ async def get_radarr_folders(cfg: ServiceConfig):
         return {"error": str(e)}
 
 @app.post("/api/sonarr/profiles")
-async def get_sonarr_profiles(cfg: ServiceConfig):
+async def get_sonarr_profiles(cfg: ServiceConfig, authorized: bool = Depends(check_auth)):
     try:
         profiles = await sonarr.sonarr_get_quality_profiles(cfg.url, cfg.api_key)
         return profiles
@@ -142,7 +162,7 @@ async def get_sonarr_profiles(cfg: ServiceConfig):
         return {"error": str(e)}
 
 @app.post("/api/sonarr/folders")
-async def get_sonarr_folders(cfg: ServiceConfig):
+async def get_sonarr_folders(cfg: ServiceConfig, authorized: bool = Depends(check_auth)):
     try:
         folders = await sonarr.sonarr_get_root_folders(cfg.url, cfg.api_key)
         return [{"path": f} for f in folders]

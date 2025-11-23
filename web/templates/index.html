@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Media Top List Manager</title>
+    <title>MediaTrend Manager</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -240,14 +240,6 @@
         .section-header h3 {
             font-size: 1.2rem;
             font-weight: 600;
-        }
-
-        .section-body {
-            display: none;
-        }
-
-        .section-body.open {
-            display: block;
         }
 
         .form-group {
@@ -486,6 +478,26 @@
                 </div>
             </div>
 
+            <!-- Authentication Settings -->
+            <div class="settings-section">
+                <div class="section-header">
+                    <h3>Authentication</h3>
+                </div>
+                <div class="form-group">
+                    <label style="display: flex; align-items: center; gap: 10px;">
+                        <input type="checkbox" id="auth_enabled"> Enable Basic Authentication
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" id="auth_username" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="auth_password" class="form-control">
+                </div>
+            </div>
+
             <!-- Scheduler Settings -->
             <div class="settings-section">
                 <div class="section-header">
@@ -605,6 +617,13 @@
 
                 // Populate General
                 document.getElementById('tmdb_api_key').value = currentSettings.general.tmdb_api_key || '';
+
+                // Populate Auth
+                if (currentSettings.auth) {
+                    document.getElementById('auth_enabled').checked = currentSettings.auth.enabled;
+                    document.getElementById('auth_username').value = currentSettings.auth.username || '';
+                    document.getElementById('auth_password').value = currentSettings.auth.password || '';
+                }
 
                 // Populate Radarr
                 document.getElementById('radarr_url').value = currentSettings.radarr.url || '';
@@ -830,6 +849,11 @@
                 general: {
                     tmdb_api_key: document.getElementById('tmdb_api_key').value,
                     countries: Array.from(document.querySelectorAll('.select-chip.selected')).map(c => c.dataset.code)
+                },
+                auth: {
+                    enabled: document.getElementById('auth_enabled').checked,
+                    username: document.getElementById('auth_username').value,
+                    password: document.getElementById('auth_password').value
                 },
                 scheduler: {
                     jobs: schedulerJobs

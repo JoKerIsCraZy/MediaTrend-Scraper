@@ -7,6 +7,11 @@
       "CH"
     ]
   },
+  "auth": {
+    "enabled": false,
+    "username": "admin",
+    "password": "password"
+  },
   "scheduler": {
     "jobs": {
       "netflix_movies": {

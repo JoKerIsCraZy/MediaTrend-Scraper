@@ -45,6 +45,11 @@ def get_default_settings() -> Dict[str, Any]:
             "tmdb_api_key": "",
             "countries": ["DE", "US", "CH"] # Standardländer
         },
+        "auth": {
+            "enabled": False,
+            "username": "admin",
+            "password": "password"
+        },
         "scheduler": {
             # Standardmäßig alle Jobs deaktiviert, User muss sie aktivieren
             "jobs": {
