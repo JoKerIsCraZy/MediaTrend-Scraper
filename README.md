@@ -51,6 +51,15 @@ Configuration is done via the `settings.json` file or conveniently via the web i
 *   **Radarr/Sonarr**: URL and API Key are required to add media.
 *   **Sources**: Enable/Disable individual sources (e.g., Netflix, Disney+).
 *   **Countries**: Define for which countries lists should be fetched (e.g., "DE", "US", "WORLD").
+*   **Authentication**: Secure the web interface with a username and password.
+
+### Authentication
+
+Basic Authentication can be enabled to protect the web interface.
+*   **Default Username**: `admin`
+*   **Default Password**: `password`
+*   **Enable**: Go to Settings -> Authentication and check "Enable Basic Authentication".
+*   **Note**: You must restart the application for authentication changes to take effect.
 
 ## Development
 
