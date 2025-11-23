@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Media Top List Manager
+MediaTrend Scraper
 An interactive tool to send top lists from streaming services
 to Radarr and Sonarr.
 """
@@ -12,7 +12,7 @@ import utils.menu as menu
 
 def show_main_menu():
     """Shows the main menu and waits for a selection."""
-    print("\n=== Media Top List Manager (CLI Mode) ===")
+    print("\n=== MediaTrend Scraper (CLI Mode) ===")
     print("1) Run Top Lists Now")
     print("2) Manage Settings")
     print("3) Exit")
