@@ -1,0 +1,92 @@
+{
+  "general": {
+    "tmdb_api_key": "",
+    "countries": [
+      "DE",
+      "US",
+      "CH"
+    ]
+  },
+  "scheduler": {
+    "jobs": {
+      "netflix_movies": {
+        "enabled": false,
+        "time": "04:00"
+      },
+      "netflix_series": {
+        "enabled": false,
+        "time": "04:15"
+      },
+      "amazon_movies": {
+        "enabled": false,
+        "time": "04:30"
+      },
+      "amazon_series": {
+        "enabled": false,
+        "time": "04:45"
+      },
+      "disney_movies": {
+        "enabled": false,
+        "time": "05:00"
+      },
+      "disney_series": {
+        "enabled": false,
+        "time": "05:15"
+      },
+      "hbo_movies": {
+        "enabled": false,
+        "time": "05:30"
+      },
+      "hbo_series": {
+        "enabled": false,
+        "time": "05:45"
+      },
+      "hulu_movies": {
+        "enabled": false,
+        "time": "06:00"
+      },
+      "hulu_series": {
+        "enabled": false,
+        "time": "06:15"
+      },
+      "peacock_movies": {
+        "enabled": false,
+        "time": "06:30"
+      },
+      "peacock_series": {
+        "enabled": false,
+        "time": "06:45"
+      },
+      "paramount_movies": {
+        "enabled": false,
+        "time": "07:00"
+      },
+      "paramount_series": {
+        "enabled": false,
+        "time": "07:15"
+      },
+      "apple_movies": {
+        "enabled": false,
+        "time": "07:30"
+      },
+      "apple_series": {
+        "enabled": false,
+        "time": "07:45"
+      }
+    }
+  },
+  "radarr": {
+    "url": "http://localhost:7878",
+    "api_key": "",
+    "quality_profile_id": 1,
+    "root_folder_path": "/movies",
+    "search_on_add": true
+  },
+  "sonarr": {
+    "url": "http://localhost:8989",
+    "api_key": "",
+    "quality_profile_id": 1,
+    "root_folder_path": "/tv",
+    "search_on_add": true
+  }
+}

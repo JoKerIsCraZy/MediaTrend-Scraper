@@ -5,7 +5,22 @@ from bs4 import BeautifulSoup
 from typing import List
 from utils.types import MediaType
 
-# Selenium-Importe
+# Selenium Imports
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service as ChromeService
+from selenium.webdriver.chrome.options import Options as ChromeOptions
+from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.by import By
+#!/usr/bin/env python3
+import time
+import asyncio
+from bs4 import BeautifulSoup
+from typing import List
+from utils.types import MediaType
+
+# Selenium Imports
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service as ChromeService
 from selenium.webdriver.chrome.options import Options as ChromeOptions
@@ -20,8 +35,8 @@ USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTM
 
 def _get_flixpatrol_html_with_selenium(service_slug: str, country_code: str, media_type: str) -> str | None:
     """
-    Holt die Top-10-Seite, klickt auf Cookie-Banner UND klickt auf die richtige Registerkarte,
-    WENN sie existiert.
+    Fetches the Top 10 page, clicks on cookie banner AND clicks on the correct tab,
+    IF it exists.
     """
     
     country_map = {
@@ -32,11 +47,11 @@ def _get_flixpatrol_html_with_selenium(service_slug: str, country_code: str, med
     }
     country_slug = country_map.get(country_code.upper())
     if not country_slug:
-        menu.log_warn(f"[FlixPatrol] Ländercode {country_code} wird nicht unterstützt.")
+        menu.log_warn(f"[FlixPatrol] Country code {country_code} is not supported.")
         return None
 
     url = f"https://flixpatrol.com/top10/{service_slug}/{country_slug}/"
-    menu.log(f"[FlixPatrol] Lade URL mit Selenium: {url}")
+    menu.log(f"[FlixPatrol] Loading URL with Selenium: {url}")
 
     driver = None
     try:
@@ -46,56 +61,58 @@ def _get_flixpatrol_html_with_selenium(service_slug: str, country_code: str, med
         options.add_argument("--disable-gpu")
         options.add_argument("--window-size=1920x1080")
         options.add_argument("--log-level=3") 
+        options.add_argument("--no-sandbox")
+        options.add_argument("--disable-dev-shm-usage") 
 
         service = ChromeService(ChromeDriverManager().install())
         driver = webdriver.Chrome(service=service, options=options)
         
         driver.get(url)
         
-        # Kurze Wartezeit für dynamisches Laden (SPA)
+        # Short wait for dynamic loading (SPA)
         time.sleep(2)
 
-        # --- 1. PRÜFUNG AUF 404 / PAGE NOT FOUND ---
+        # --- 1. CHECK FOR 404 / PAGE NOT FOUND ---
         page_source_lower = driver.page_source.lower()
         title_lower = driver.title.lower()
         
         if "page not found" in title_lower or "page not found" in page_source_lower or "404" in title_lower:
-             menu.log_warn(f"Seite nicht gefunden (404) für {url}. Überspringe.")
+             menu.log_warn(f"Page not found (404) for {url}. Skipping.")
              return None
         
-        # --- 2. VERSUCHEN, AUF DIE KORREKTE REGISTERKARTE ZU KLICKEN ---
+        # --- 2. TRY TO CLICK ON THE CORRECT TAB ---
         tab_text = "Movies" if media_type == "movies" else "TV Shows"
         try:
-            # Wir warten nur 5 Sekunden, da die Registerkarte bei Diensten wie Disney+ nicht existiert
-            menu.log(f"[FlixPatrol] Suche nach '{tab_text}' Registerkarte (max 5s)...")
-            # Robuster XPATH-Selektor
+            # We wait only 5 seconds, as the tab might not exist for services like Disney+
+            menu.log(f"[FlixPatrol] Searching for '{tab_text}' tab (max 5s)...")
+            # Robust XPATH selector
             xpath_selector = f"//a[span[text()='{tab_text}']]"
             tab_link = WebDriverWait(driver, 5).until(
                 EC.element_to_be_clickable((By.XPATH, xpath_selector))
             )
             tab_link.click()
-            menu.log(f"[FlixPatrol] Registerkarte '{tab_text}' geklickt.")
-            time.sleep(3) # Kurze Pause, damit die neue Tabelle rendern kann
+            menu.log(f"[FlixPatrol] Clicked tab '{tab_text}'.")
+            time.sleep(3) # Short pause to let the new table render
             
         except Exception as e:
-            # Das ist jetzt ein erwarteter "Fehler" für Disney+
-            menu.log_warn(f"[FlixPatrol] Registerkarte '{tab_text}' nicht gefunden. Verwende Standard/Overall-Ansicht.")
+            # This is now an expected "error" for Disney+
+            menu.log_warn(f"[FlixPatrol] Tab '{tab_text}' not found. Using default/overall view.")
             if "404 Not Found" in driver.title:
-                 menu.log_warn(f"Dienst '{service_slug}' für Land '{country_slug}' nicht auf FlixPatrol gefunden (404).")
+                 menu.log_warn(f"Service '{service_slug}' for country '{country_slug}' not found on FlixPatrol (404).")
                  return None
 
-        # --- 3. AUF DEN INHALT WARTEN ---
-        menu.log("[FlixPatrol] Warte auf das Laden der 'card -mx-content' (max 10s)...")
+        # --- 3. WAIT FOR CONTENT ---
+        menu.log("[FlixPatrol] Waiting for 'card -mx-content' to load (max 10s)...")
         WebDriverWait(driver, 10).until(
             EC.presence_of_element_located((By.CSS_SELECTOR, "div.card.-mx-content"))
         )
-        menu.log("[FlixPatrol] Inhalt ist geladen.")
+        menu.log("[FlixPatrol] Content loaded.")
         
         html = driver.page_source
         return html
 
     except Exception as e:
-        menu.log_error(f"FlixPatrol Selenium-Fehler für {url}: {e}")
+        menu.log_error(f"FlixPatrol Selenium error for {url}: {e}")
         return None
     finally:
         if driver:
@@ -103,35 +120,35 @@ def _get_flixpatrol_html_with_selenium(service_slug: str, country_code: str, med
 
 def _parse_flixpatrol_table(table_card_soup: BeautifulSoup) -> List[str]:
     """
-    Parst die HTML-Tabelle von FlixPatrol und extrahiert Titel.
-    (REParierte Version, die alle Tabellentypen parsen kann)
+    Parses the HTML table from FlixPatrol and extracts titles.
+    (FIXED version that can parse all table types)
     """
     titles = []
     
     table = table_card_soup.find('table', class_='card-table')
     if not table:
-        menu.log_warn("[FlixPatrol] Parser konnte 'table.card-table' in der Karte nicht finden.")
+        menu.log_warn("[FlixPatrol] Parser could not find 'table.card-table' in the card.")
         return []
 
-    # Finde alle Zeilen im Tabellenkörper
+    # Find all rows in table body
     rows = table.find_all('tr')
     
     for row in rows:
-        # Finde den Titel-Link (<a>-Tag). Dieser ist manchmal in der ersten
-        # <td>, manchmal in der zweiten (nach der Rangliste).
+        # Find the title link (<a> tag). This is sometimes in the first
+        # <td>, sometimes in the second (after the rank).
         title_link = row.find('a') 
         
         if title_link:
             title = title_link.get_text(strip=True)
             if title:
-                # Verhindert, dass Müll (z.B. leere Links) hinzugefügt wird
+                # Prevents adding garbage (e.g., empty links)
                 titles.append(title)
 
     return titles
 
 async def scrape_flixpatrol(service_slug: str, country_code: str, media_type: MediaType) -> List[str]:
     """
-    Hauptfunktion für FlixPatrol-Scraping (Disney+, Amazon, HBO, etc.).
+    Main function for FlixPatrol scraping (Disney+, Amazon, HBO, etc.).
     """
     # Selenium is blocking, so we run it in a separate thread
     html = await asyncio.to_thread(_get_flixpatrol_html_with_selenium, service_slug, country_code, "movies" if media_type == MediaType.MOVIE else "tv")
@@ -141,8 +158,8 @@ async def scrape_flixpatrol(service_slug: str, country_code: str, media_type: Me
 
     soup = BeautifulSoup(html, "html.parser")
     
-    # Wir suchen nach "Movies", "TV Shows" oder "TOP 10 Overall"
-    # User-Feedback: "Es heisst entweder Movies oder TOP 10 Overall auf der website"
+    # We look for "Movies", "TV Shows" or "TOP 10 Overall"
+    # User Feedback: "It says either Movies or TOP 10 Overall on the website"
     
     target_header_primary = "Movies" if media_type == MediaType.MOVIE else "TV Shows"
     target_header_fallback = "TOP 10 Overall" 
@@ -150,29 +167,29 @@ async def scrape_flixpatrol(service_slug: str, country_code: str, media_type: Me
     all_cards = soup.find_all("div", class_="card")
     found_card = None
     
-    # 1. Suche nach dem primären Ziel (Movies / TV Shows)
+    # 1. Search for primary target (Movies / TV Shows)
     for card in all_cards:
         header = card.find('h3')
         if header:
             header_text = header.get_text(strip=True)
-            # Exakter Match oder "TOP 10 Movies" falls sie es doch mal ändern, aber User sagt "Movies"
+            # Exact match or "TOP 10 Movies" in case they change it, but user says "Movies"
             if target_header_primary == header_text or f"TOP 10 {target_header_primary}" in header_text:
-                menu.log(f"[FlixPatrol] Spezifische Tabelle '{header_text}' gefunden.")
+                menu.log(f"[FlixPatrol] Specific table '{header_text}' found.")
                 found_card = card
                 break
     
-    # 2. Suche nach dem Fallback (Overall), WENN das primäre Ziel fehlgeschlagen ist
+    # 2. Search for fallback (Overall), IF primary target failed
     if not found_card:
-        menu.log_warn(f"[FlixPatrol] '{target_header_primary}' nicht gefunden. Suche nach Fallback '{target_header_fallback}'.")
+        menu.log_warn(f"[FlixPatrol] '{target_header_primary}' not found. Searching for fallback '{target_header_fallback}'.")
         for card in all_cards:
             header = card.find('h3')
             if header and target_header_fallback in header.get_text(strip=True):
-                menu.log(f"[FlixPatrol] Fallback-Tabelle '{target_header_fallback}' gefunden.")
+                menu.log(f"[FlixPatrol] Fallback table '{target_header_fallback}' found.")
                 found_card = card
                 break
 
     if found_card:
         return _parse_flixpatrol_table(found_card)
     else:
-        menu.log_warn(f"[FlixPatrol] Konnte weder '{target_header_primary}' noch '{target_header_fallback}' finden.")
+        menu.log_warn(f"[FlixPatrol] Could not find neither '{target_header_primary}' nor '{target_header_fallback}'.")
         return []

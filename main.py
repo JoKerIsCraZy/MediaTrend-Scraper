@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Media-Top-Listen-Manager
-Ein interaktives Tool, um Top-Listen von Streaming-Diensten 
-an Radarr und Sonarr zu senden.
+Media Top List Manager
+An interactive tool to send top lists from streaming services
+to Radarr and Sonarr.
 """
 
 import sys
@@ -11,43 +11,43 @@ import worker
 import utils.menu as menu
 
 def show_main_menu():
-    """Zeigt das Hauptmenü an und wartet auf eine Auswahl."""
-    print("\n=== Media-Top-Listen-Manager (CLI Modus) ===")
-    print("1) Top-Listen jetzt ausführen")
-    print("2) Einstellungen verwalten")
-    print("3) Beenden")
-    return input("Wählen Sie eine Option: ").strip()
+    """Shows the main menu and waits for a selection."""
+    print("\n=== Media Top List Manager (CLI Mode) ===")
+    print("1) Run Top Lists Now")
+    print("2) Manage Settings")
+    print("3) Exit")
+    return input("Choose an option: ").strip()
 
 def run_cli():
-    """Haupt-Loop des CLI-Programms."""
+    """Main loop of the CLI program."""
     
-    # Lädt die Einstellungen beim Start
+    # Load settings at startup
     config = settings.load_settings()
 
     while True:
         choice = show_main_menu()
 
         if choice == "1":
-            # Startet das Job-Ausführungs-Menü
+            # Starts the job execution menu
             worker.show_run_menu(config)
         
         elif choice == "2":
-            # Startet das Einstellungs-Menü
+            # Starts the settings menu
             settings.show_settings_menu(config)
         
         elif choice == "3":
-            print("Auf Wiedersehen!")
+            print("Goodbye!")
             break
         
         else:
-            menu.log_warn("Ungültige Auswahl, bitte erneut versuchen.")
+            menu.log_warn("Invalid selection, please try again.")
 
 def main():
     if "--cli" in sys.argv:
         run_cli()
     else:
-        # Webserver starten
-        print("Starte Web-Interface... (Verwende --cli für den alten Modus)")
+        # Start web server
+        print("Starting Web Interface... (Use --cli for legacy mode)")
         from web.app import start_web_server
         start_web_server()
 
@@ -55,4 +55,4 @@ if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        print("\nBeendet durch Benutzer.")
+        print("\nTerminated by user.")

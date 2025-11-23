@@ -1,2 +1,64 @@
-# MediaTrend-Scraper
-The MediaTrend Scraper is an intelligent companion script designed to automate and enhance your Sonarr and Radarr media management workflow.
+# MediaTrend Scraper
+
+A powerful tool to scrape Top 10 lists from various streaming services (Netflix, Disney+, Amazon Prime, etc.) and automatically add these media items to Radarr and Sonarr.
+
+## Features
+
+*   **Multi-Source Scraping**: Supports Netflix (official API) and FlixPatrol (for Disney+, Amazon Prime, HBO, etc.).
+*   **Radarr & Sonarr Integration**: Automatically adds found movies and series to your media library.
+*   **Web Interface**: User-friendly interface for configuration and manual control.
+*   **Scheduler**: Automatic execution of scraping jobs according to a schedule.
+*   **Docker Support**: Easy deployment using Docker and Docker Compose.
+
+## Installation & Usage
+
+### Option 1: Docker (Recommended)
+
+The easiest way to run the scraper is using Docker.
+
+1.  **Prerequisites**: Ensure Docker and Docker Compose are installed.
+2.  **Configuration**:
+    *   The `settings.json` file is automatically mounted in the container. You can edit this file locally to adjust your API keys and settings.
+    *   Ensure the `settings.json` file is in the same directory as `docker-compose.yml`.
+3.  **Start**:
+    Open a terminal in the project folder and run the following command:
+    ```bash
+    docker-compose up -d --build
+    ```
+4.  **Access**:
+    The web interface is now accessible at `http://localhost:8000`.
+
+### Option 2: Local Installation (Python)
+
+1.  **Prerequisites**: Python 3.11 or higher and Google Chrome (for Selenium).
+2.  **Install Dependencies**:
+    ```bash
+    pip install -r requirements.txt
+    ```
+3.  **Start**:
+    ```bash
+    python main.py
+    ```
+4.  **Access**:
+    The web interface is accessible at `http://localhost:8000`.
+
+## Configuration
+
+Configuration is done via the `settings.json` file or conveniently via the web interface.
+
+### Important Settings:
+
+*   **Radarr/Sonarr**: URL and API Key are required to add media.
+*   **Sources**: Enable/Disable individual sources (e.g., Netflix, Disney+).
+*   **Countries**: Define for which countries lists should be fetched (e.g., "DE", "US", "WORLD").
+
+## Development
+
+*   `main.py`: Entry point of the application. Starts web server and scheduler.
+*   `worker.py`: Contains the logic for processing scraping jobs.
+*   `sources/`: Modules for the various data sources.
+*   `targets/`: Modules for the target systems (Radarr, Sonarr).
+
+## License
+
+[MIT License](LICENSE)

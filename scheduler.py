@@ -19,7 +19,7 @@ class SchedulerService:
         self._setup_jobs()
 
     def _setup_jobs(self):
-        """Lädt die Jobs basierend auf der Konfiguration."""
+        """Loads jobs based on configuration."""
         self.scheduler.remove_all_jobs()
         
         scheduler_config = self.config.get("scheduler", {}).get("jobs", {})
@@ -31,83 +31,83 @@ class SchedulerService:
                     hour, minute = map(int, time_str.split(":"))
                     self.add_job(job_key, self._create_job_func(job_key), CronTrigger(hour=hour, minute=minute))
                 except ValueError:
-                    menu.log_error(f"Ungültiges Zeitformat für Job '{job_key}': {time_str}")
+                    menu.log_error(f"Invalid time format for job '{job_key}': {time_str}")
 
     def reload_jobs(self):
-        """Lädt die Jobs neu (z.B. nach Einstellungsänderung)."""
-        menu.log("Lade Scheduler-Jobs neu...")
+        """Reloads jobs (e.g., after settings change)."""
+        menu.log("Reloading scheduler jobs...")
         self._setup_jobs()
 
     def _create_job_func(self, job_key: str):
-        """Erstellt eine Wrapper-Funktion für den Job."""
-        # Parsen des Keys: z.B. "netflix_movies" -> platform="netflix", type="movies"
+        """Creates a wrapper function for the job."""
+        # Parse key: e.g. "netflix_movies" -> platform="netflix", type="movies"
         parts = job_key.split("_")
         if len(parts) < 2:
-            return lambda: None # Sollte nicht passieren
+            return lambda: None # Should not happen
         
         platform_id = parts[0]
         media_type_str = parts[1] # "movies" oder "series"
         
         media_type = MediaType.MOVIE if media_type_str == "movies" else MediaType.SERIES
         
-        # Finde den korrekten Namen und Slug
+        # Find correct name and slug
         platform_info = next((p for p in settings.SUPPORTED_PLATFORMS if p["id"] == platform_id), None)
         
         if not platform_info:
-            menu.log_warn(f"Unbekannte Plattform-ID im Job: {platform_id}")
+            menu.log_warn(f"Unknown platform ID in job: {platform_id}")
             return lambda: None
 
         platform_name = platform_info["name"]
         platform_slug = platform_info["slug"]
 
         async def job_wrapper():
-            # Spezialfall Netflix: Hat eigenes Modul
+            # Special case Netflix: Has its own module
             if platform_id == "netflix":
                 await worker.process_media_list(self.config, platform_name, media_type, 
                                                 lambda c: netflix.scrape_netflix(c, media_type))
             else:
-                # Alle anderen über FlixPatrol
+                # All others via FlixPatrol
                 await worker.process_media_list(self.config, platform_name, media_type, 
                                                 lambda c: flixpatrol.scrape_flixpatrol(platform_slug, c, media_type))
         
         return job_wrapper
 
     def start(self):
-        """Startet den Scheduler."""
+        """Starts the scheduler."""
         if not self.scheduler.running:
             self.scheduler.start()
-            menu.log("Scheduler gestartet.")
+            menu.log("Scheduler started.")
 
     def stop(self):
-        """Stoppt den Scheduler."""
+        """Stops the scheduler."""
         if self.scheduler.running:
             self.scheduler.shutdown()
-            menu.log("Scheduler gestoppt.")
+            menu.log("Scheduler stopped.")
 
     def add_job(self, job_id: str, func, trigger, **kwargs):
-        """Fügt einen Job hinzu."""
+        """Adds a job."""
         try:
             self.scheduler.add_job(func, trigger, id=job_id, replace_existing=True, **kwargs)
-            menu.log(f"Job '{job_id}' hinzugefügt (Trigger: {trigger}).")
+            menu.log(f"Job '{job_id}' added (Trigger: {trigger}).")
         except Exception as e:
-            menu.log_error(f"Fehler beim Hinzufügen von Job '{job_id}': {e}")
+            menu.log_error(f"Error adding job '{job_id}': {e}")
 
     def remove_job(self, job_id: str):
-        """Entfernt einen Job."""
+        """Removes a job."""
         try:
             self.scheduler.remove_job(job_id)
-            menu.log(f"Job '{job_id}' entfernt.")
+            menu.log(f"Job '{job_id}' removed.")
         except JobLookupError:
             pass
         except Exception as e:
-            menu.log_error(f"Fehler beim Entfernen von Job '{job_id}': {e}")
+            menu.log_error(f"Error removing job '{job_id}': {e}")
 
     def get_jobs(self):
-        """Gibt eine Liste der aktiven Jobs zurück."""
+        """Returns a list of active jobs."""
         return self.scheduler.get_jobs()
 
     async def run_job_now(self, job_key: str):
-        """Führt einen Job sofort aus."""
+        """Executes a job immediately."""
         func = self._create_job_func(job_key)
         await func()
 

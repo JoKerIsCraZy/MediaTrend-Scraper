@@ -12,12 +12,12 @@ from utils.network import AsyncClient
 
 TMDB_API_BASE = "https://api.themoviedb.org/3"
 
-# --- TMDb Suchfunktionen ---
+# --- TMDb Search Functions ---
 
 async def tmdb_search(api_key: str, query: str, media_type: MediaType) -> Optional[Dict[str, Any]]:
-    """Sucht bei TMDb nach einem Film oder einer Serie."""
+    """Searches TMDb for a movie or series."""
     if not api_key:
-        menu.log_error("TMDb API Key fehlt in den Einstellungen.")
+        menu.log_error("TMDb API Key missing in settings.")
         return None
         
     search_type = "movie" if media_type == MediaType.MOVIE else "tv"
@@ -27,15 +27,15 @@ async def tmdb_search(api_key: str, query: str, media_type: MediaType) -> Option
         if data:
             results = data.get("results", [])
             if results:
-                return results[0] # Nimm das erste, beste Ergebnis
+                return results[0] # Take the first, best result
     except Exception as e:
-        menu.log_error(f"TMDb-Suche für '{query}' fehlgeschlagen: {e}")
+        menu.log_error(f"TMDb search for '{query}' failed: {e}")
     return None
 
 async def tmdb_get_tvdb_id(api_key: str, tmdb_id: int) -> Optional[int]:
-    """Holt die TVDb-ID für eine TMDb-Serien-ID."""
+    """Fetches the TVDb ID for a TMDb series ID."""
     if not api_key:
-        menu.log_error("TMDb API Key fehlt in den Einstellungen.")
+        menu.log_error("TMDb API Key missing in settings.")
         return None
     
     params = {"api_key": api_key}
@@ -44,10 +44,10 @@ async def tmdb_get_tvdb_id(api_key: str, tmdb_id: int) -> Optional[int]:
         if data and data.get("tvdb_id"):
             return int(data["tvdb_id"])
     except Exception as e:
-        menu.log_error(f"TMDb External ID-Suche für '{tmdb_id}' fehlgeschlagen: {e}")
+        menu.log_error(f"TMDb External ID search for '{tmdb_id}' failed: {e}")
     return None
 
-# --- Generische Worker-Logik ---
+# --- Generic Worker Logic ---
 
 async def process_media_list(
     config: Dict[str, Any],
@@ -56,67 +56,67 @@ async def process_media_list(
     fetch_titles_func: Callable[[str], Awaitable[List[str]]]
 ) -> None:
     """
-    Generische Funktion zum Verarbeiten von Listen.
+    Generic function for processing lists.
     
     Args:
-        config: Die Konfiguration.
-        source_name: Name der Quelle (für Logs).
-        media_type: MediaType.MOVIE oder MediaType.SERIES.
-        fetch_titles_func: Async Funktion, die einen Ländercode annimmt und eine Liste von Titeln zurückgibt.
+        config: The configuration.
+        source_name: Name of the source (for logs).
+        media_type: MediaType.MOVIE or MediaType.SERIES.
+        fetch_titles_func: Async function that takes a country code and returns a list of titles.
     """
     target_name = "Radarr" if media_type == MediaType.MOVIE else "Sonarr"
-    menu.log(f"Starte {source_name} ({media_type.value}) -> {target_name}...")
+    menu.log(f"Starting {source_name} ({media_type.value}) -> {target_name}...")
 
-    # 1. Überprüfungen
+    # 1. Checks
     tmdb_key = config["general"]["tmdb_api_key"]
     if not tmdb_key:
-        menu.log_error("TMDb API Key fehlt. Bitte in den Einstellungen festlegen.")
+        menu.log_error("TMDb API Key missing. Please set in settings.")
         return
 
     target_cfg = config["radarr"] if media_type == MediaType.MOVIE else config["sonarr"]
     if not target_cfg["api_key"]:
-        menu.log_error(f"{target_name} API Key fehlt. Bitte in den Einstellungen festlegen.")
+        menu.log_error(f"{target_name} API Key missing. Please set in settings.")
         return
 
-    # 2. Vorhandene Medien abrufen
-    menu.log(f"Rufe vorhandene Einträge von {target_name} ab...")
+    # 2. Fetch existing media
+    menu.log(f"Fetching existing entries from {target_name}...")
     existing_ids = {}
     if media_type == MediaType.MOVIE:
         existing_ids = await radarr.radarr_lookup_existing(target_cfg["url"], target_cfg["api_key"])
     else:
         existing_ids = await sonarr.sonarr_lookup_existing(target_cfg["url"], target_cfg["api_key"])
     
-    menu.log(f"{len(existing_ids)} Einträge bereits in {target_name} vorhanden.")
+    menu.log(f"{len(existing_ids)} entries already exist in {target_name}.")
 
-    # 3. Länder durchlaufen und scrapen
+    # 3. Iterate countries and scrape
     countries = config["general"]["countries"]
     all_titles = set()
 
     for country in countries:
-        menu.log(f"Scrape {source_name} für: {country}")
+        menu.log(f"Scrape {source_name} for: {country}")
         titles = await fetch_titles_func(country)
         all_titles.update(titles)
     
-    menu.log(f"Insgesamt {len(all_titles)} einzigartige Titel gefunden.")
+    menu.log(f"Found {len(all_titles)} unique titles in total.")
 
-    # 4. Verarbeiten und Senden
+    # 4. Process and Send
     added_count = 0
     for title in all_titles:
-        # 4a. TMDb Suche
+        # 4a. TMDb Search
         tmdb_match = await tmdb_search(tmdb_key, title, media_type)
         if not tmdb_match or not tmdb_match.get("id"):
-            menu.log_warn(f"Keine TMDb-Übereinstimmung für '{title}' gefunden.")
+            menu.log_warn(f"No TMDb match found for '{title}'.")
             continue
         
         tmdb_id = tmdb_match["id"]
 
-        # 4b. Prüfen ob vorhanden & Senden
+        # 4b. Check if exists & Send
         if media_type == MediaType.MOVIE:
             if tmdb_id in existing_ids:
-                menu.log(f"'{title}' (TMDb: {tmdb_id}) ist bereits in Radarr. Überspringe.")
+                menu.log(f"'{title}' (TMDb: {tmdb_id}) is already in Radarr. Skipping.")
                 continue
             
-            # Extrahiere Jahr
+            # Extract Year
             year_str = tmdb_match.get("release_date", "0000")[:4]
             year = int(year_str) if year_str.isdigit() else 0
 
@@ -125,45 +125,45 @@ async def process_media_list(
                 existing_ids[tmdb_id] = True
         
         else: # SERIES
-            # Für Serien brauchen wir die TVDb ID
+            # For series we need the TVDb ID
             tvdb_id = await tmdb_get_tvdb_id(tmdb_key, tmdb_id)
             if not tvdb_id:
-                menu.log_warn(f"Keine TVDb-ID für '{title}' (TMDb: {tmdb_id}) gefunden.")
+                menu.log_warn(f"No TVDb ID found for '{title}' (TMDb: {tmdb_id}).")
                 continue
             
             if tvdb_id in existing_ids:
-                menu.log(f"'{title}' (TVDb: {tvdb_id}) ist bereits in Sonarr. Überspringe.")
+                menu.log(f"'{title}' (TVDb: {tvdb_id}) is already in Sonarr. Skipping.")
                 continue
 
             if await sonarr.sonarr_add_series(config, tvdb_id):
                 added_count += 1
                 existing_ids[tvdb_id] = True
 
-    menu.log(f"{source_name} -> {target_name} Task abgeschlossen. {added_count} neue Einträge hinzugefügt.")
+    menu.log(f"{source_name} -> {target_name} Task finished. {added_count} new entries added.")
 
 
-# --- Wrapper für das Menü ---
+# --- Wrapper for the Menu ---
 
 def show_run_menu(config: Dict[str, Any]) -> None:
-    """Zeigt das Menü zum Ausführen der Jobs an."""
+    """Shows the menu to execute jobs."""
     while True:
-        print("\n--- Top-Listen jetzt ausführen ---")
+        print("\n--- Run Top Lists Now ---")
         print("--- Netflix (Tudum) ---")
-        print("1) Netflix (Filme) -> Radarr")
-        print("2) Netflix (Serien) -> Sonarr")
+        print("1) Netflix (Movies) -> Radarr")
+        print("2) Netflix (Series) -> Sonarr")
         print("--- FlixPatrol (Amazon) ---")
-        print("3) Amazon Prime (Filme) -> Radarr")
-        print("4) Amazon Prime (Serien) -> Sonarr")
+        print("3) Amazon Prime (Movies) -> Radarr")
+        print("4) Amazon Prime (Series) -> Sonarr")
         print("--- FlixPatrol (Disney+) ---")
-        print("5) Disney+ (Filme) -> Radarr")
-        print("6) Disney+ (Serien) -> Sonarr")
+        print("5) Disney+ (Movies) -> Radarr")
+        print("6) Disney+ (Series) -> Sonarr")
         print("--- FlixPatrol (HBO) ---")
-        print("7) HBO Max (Filme) -> Radarr")
-        print("8) HBO Max (Serien) -> Sonarr")
+        print("7) HBO Max (Movies) -> Radarr")
+        print("8) HBO Max (Series) -> Sonarr")
         print("---")
-        print("9) Zurück zum Hauptmenü")
+        print("9) Back to Main Menu")
         
-        choice = input("Wählen Sie einen Job: ").strip()
+        choice = input("Select a job: ").strip()
 
         async def run_job(job_func):
             try:
@@ -198,4 +198,4 @@ def show_run_menu(config: Dict[str, Any]) -> None:
         elif choice == "9":
             break
         else:
-            menu.log_warn("Ungültige Auswahl.")
+            menu.log_warn("Invalid selection.")

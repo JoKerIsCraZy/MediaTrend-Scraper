@@ -6,5 +6,4 @@ apscheduler
 jinja2
 beautifulsoup4
 lxml
-
-beautifulsoup4
+selenium

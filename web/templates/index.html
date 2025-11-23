@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Media Top-Listen Manager</title>
+    <title>Media Top List Manager</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -434,250 +434,243 @@
 </head>
 
 <body>
-    <nav class="sidebar">
-        <div class="brand">
-            <span>🚀</span> Media Manager
+    <div class="sidebar">
+        <div class="brand">MediaTrend</div>
+        <div class="nav-item active" onclick="switchView('dashboard', this)">
+            Dashboard
         </div>
-        <div class="nav-item active" onclick="switchView('dashboard')"><span>📊</span>Dashboard </div>
-        <div class="nav-item" onclick="switchView('settings')"><span>⚙️</span>Einstellungen </div>
-        <div class="nav-item" onclick="switchView('logs')"><span>📝</span>Logs </div>
-    </nav>
+        <div class="nav-item" onclick="switchView('settings', this)">
+            Settings
+        </div>
+        <div class="nav-item" onclick="switchView('logs', this)">
+            Logs
+        </div>
 
-    <!-- Main Content -->
-    <main class="main-content">
+        <div style="margin-top: auto; padding-top: 20px; border-top: 1px solid var(--border-color);">
+            <div style="display: flex; align-items: center; color: var(--text-secondary); font-size: 0.9rem;">
+                <span id="scheduler-status-dot" class="status-indicator stopped"></span>
+                <span id="scheduler-status-text">Stopped</span>
+            </div>
+            <div style="margin-top: 5px; color: var(--text-secondary); font-size: 0.8rem;">
+                Active Jobs: <span id="job-count">0</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-content">
         <!-- Dashboard View -->
-        <div id="dashboard" class="view active">
+        <div id="dashboard-view" class="view active">
             <h1>Dashboard</h1>
-            <p class="subtitle">Verwalte deine Streaming-Top-Listen</p>
-            <div id="platforms-container" class="platforms-grid">
-                <!-- Cards will be injected here -->
-                <div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-secondary);">Lade
-                    Plattformen... </div>
+            <p class="subtitle">Manage your media scraping jobs.</p>
+            <div class="platforms-grid" id="platforms-grid">
+                <!-- Populated by JS -->
             </div>
         </div>
 
         <!-- Settings View -->
-        <div id="settings" class="view">
-            <h1>Einstellungen</h1>
-            <p class="subtitle">Konfiguriere APIs und Zeitpläne</p>
+        <div id="settings-view" class="view">
+            <h1>Settings</h1>
 
+            <!-- General Settings -->
             <div class="settings-section">
-                <div class="section-header" onclick="toggleSection(this)">
-                    <h3>Allgemein</h3><span>▼</span>
+                <div class="section-header">
+                    <h3>General</h3>
                 </div>
-                <div class="section-body open">
-                    <div class="form-group">
-                        <label>TMDb API Key</label>
-                        <input type="text" id="tmdb_api_key" class="form-control" placeholder="TMDb API Key eingeben">
-                    </div>
-                    <div class="form-group">
-                        <label>Länder</label>
-                        <div id="country-selector" class="chip-container">
-                            <!-- Countries injected here -->
-                        </div>
-                    </div>
+                <div class="form-group">
+                    <label>TMDb API Key</label>
+                    <input type="text" id="tmdb_api_key" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label>Countries</label>
+                    <div class="chip-container" id="country-chips"></div>
                 </div>
             </div>
 
+            <!-- Scheduler Settings -->
             <div class="settings-section">
-                <div class="section-header" onclick="toggleSection(this)">
-                    <h3>Zeitplaner (Scheduler)</h3><span>▼</span>
+                <div class="section-header">
+                    <h3>Scheduler</h3>
                 </div>
-                <div class="section-body open">
-                    <div style="margin-bottom: 15px; display: flex; align-items: center;">
-                        <div id="scheduler-status-dot" class="status-indicator stopped"></div>
-                        <span id="scheduler-status-text" style="color: var(--text-secondary);">Lädt...</span>
-                        <span style="margin-left: auto; font-size: 0.9rem; color: var(--text-secondary);">Jobs: <span
-                                id="job-count">0</span></span>
-                    </div>
-                    <div id="scheduler-settings-container">
-                        <!-- Scheduler rows injected here -->
-                    </div>
-                </div>
+                <div id="scheduler-settings-container"></div>
             </div>
 
+            <!-- Radarr Settings -->
             <div class="settings-section">
-                <div class="section-header" onclick="toggleSection(this)">
-                    <h3>Radarr</h3><span>▶</span>
+                <div class="section-header">
+                    <h3>Radarr</h3>
                 </div>
-                <div class="section-body">
-                    <div class="form-group">
-                        <label>URL</label>
-                        <input type="text" id="radarr_url" class="form-control" placeholder="http://localhost:7878">
-                    </div>
-                    <div class="form-group">
-                        <label>API Key</label>
-                        <input type="text" id="radarr_api_key" class="form-control">
-                    </div>
-                    <button class="btn btn-secondary" onclick="fetchRadarrData()"
-                        style="margin-bottom: 15px; width: 100%;">Verbindung testen & Daten laden</button>
-                    <div class="form-group">
-                        <label>Qualitätsprofil</label>
-                        <select id="radarr_profile" class="form-control"></select>
-                    </div>
-                    <div class="form-group">
-                        <label>Root Folder</label>
-                        <select id="radarr_folder" class="form-control"></select>
-                    </div>
-                    <div class="form-group">
-                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
-                            <input type="checkbox" id="radarr_search">Suche starten beim Hinzufügen
-                        </label>
-                    </div>
+                <div class="form-group">
+                    <label>URL</label>
+                    <input type="text" id="radarr_url" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label>API Key</label>
+                    <input type="text" id="radarr_api_key" class="form-control">
+                </div>
+                <button class="btn btn-secondary" onclick="fetchRadarrData()" style="margin-bottom: 15px;">Test
+                    Connection & Load Data</button>
+                <div class="form-group">
+                    <label>Quality Profile</label>
+                    <select id="radarr_profile" class="form-control"></select>
+                </div>
+                <div class="form-group">
+                    <label>Root Folder</label>
+                    <select id="radarr_folder" class="form-control"></select>
+                </div>
+                <div class="form-group">
+                    <label style="display: flex; align-items: center; gap: 10px;">
+                        <input type="checkbox" id="radarr_search"> Start search on add
+                    </label>
                 </div>
             </div>
 
+            <!-- Sonarr Settings -->
             <div class="settings-section">
-                <div class="section-header" onclick="toggleSection(this)">
-                    <h3>Sonarr</h3><span>▶</span>
+                <div class="section-header">
+                    <h3>Sonarr</h3>
                 </div>
-                <div class="section-body">
-                    <div class="form-group">
-                        <label>URL</label>
-                        <input type="text" id="sonarr_url" class="form-control" placeholder="http://localhost:8989">
-                    </div>
-                    <div class="form-group">
-                        <label>API Key</label>
-                        <input type="text" id="sonarr_api_key" class="form-control">
-                    </div>
-                    <button class="btn btn-secondary" onclick="fetchSonarrData()"
-                        style="margin-bottom: 15px; width: 100%;">Verbindung testen & Daten laden</button>
-                    <div class="form-group">
-                        <label>Qualitätsprofil</label>
-                        <select id="sonarr_profile" class="form-control"></select>
-                    </div>
-                    <div class="form-group">
-                        <label>Root Folder</label>
-                        <select id="sonarr_folder" class="form-control"></select>
-                    </div>
-                    <div class="form-group">
-                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
-                            <input type="checkbox" id="sonarr_search">Suche starten beim Hinzufügen
-                        </label>
-                    </div>
+                <div class="form-group">
+                    <label>URL</label>
+                    <input type="text" id="sonarr_url" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label>API Key</label>
+                    <input type="text" id="sonarr_api_key" class="form-control">
+                </div>
+                <button class="btn btn-secondary" onclick="fetchSonarrData()" style="margin-bottom: 15px;">Test
+                    Connection & Load Data</button>
+                <div class="form-group">
+                    <label>Quality Profile</label>
+                    <select id="sonarr_profile" class="form-control"></select>
+                </div>
+                <div class="form-group">
+                    <label>Root Folder</label>
+                    <select id="sonarr_folder" class="form-control"></select>
+                </div>
+                <div class="form-group">
+                    <label style="display: flex; align-items: center; gap: 10px;">
+                        <input type="checkbox" id="sonarr_search"> Start search on add
+                    </label>
                 </div>
             </div>
 
-            <div style="text-align: right; margin-top: 20px;">
-                <button class="btn btn-primary" onclick="saveSettings()">Einstellungen speichern</button>
-            </div>
+            <button class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
         </div>
 
         <!-- Logs View -->
-        <div id="logs" class="view">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <h1>System Logs</h1>
-                <button class="btn btn-secondary" onclick="updateLogs()">Aktualisieren</button>
-            </div>
-            <div id="log-box" class="log-console">Lade Logs...</div>
+        <div id="logs-view" class="view">
+            <h1>Logs</h1>
+            <div class="log-console" id="log-box"></div>
         </div>
-    </main>
+    </div>
 
-    <div id="toast" class="toast">Nachricht</div>
+    <!-- Toast -->
+    <div id="toast" class="toast"></div>
 
     <!-- Confirm Modal -->
     <div id="confirm-modal" class="modal-overlay">
         <div class="modal-content">
-            <h3 style="margin-bottom: 10px;">Bestätigung</h3>
-            <p id="modal-message" style="color: var(--text-secondary);">Bist du sicher?</p>
+            <h3>Confirmation</h3>
+            <p id="modal-message"></p>
             <div class="modal-actions">
-                <button class="btn btn-secondary" onclick="closeModal(false)">Abbrechen</button>
-                <button class="btn btn-primary" onclick="closeModal(true)">Starten</button>
+                <button class="btn btn-secondary" onclick="closeModal(false)">Cancel</button>
+                <button class="btn btn-primary" onclick="closeModal(true)">Start</button>
             </div>
         </div>
     </div>
 
     <script>
-        window.onerror = function (msg, url, line, col, error) {
-            alert("Error: " + msg + "\nurl: " + url + "\nline: " + line);
-            return false;
-        };
-
         let currentSettings = {};
-        let constants = {};
 
-        // --- Navigation ---
-        function switchView(viewId) {
+        function switchView(viewName, navItem) {
             document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+            document.getElementById(viewName + '-view').classList.add('active');
+
             document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-            document.getElementById(viewId).classList.add('active');
-
-            // Highlight nav item
-            const navItems = document.querySelectorAll('.nav-item');
-            if (viewId === 'dashboard') navItems[0].classList.add('active');
-            if (viewId === 'settings') navItems[1].classList.add('active');
-            if (viewId === 'logs') navItems[2].classList.add('active');
-        }
-
-        function toggleSection(header) {
-            const body = header.nextElementSibling;
-            body.classList.toggle('open');
-            header.querySelector('span').textContent = body.classList.contains('open') ? '▼' : '▶';
+            if (navItem) navItem.classList.add('active');
         }
 
         function showToast(msg, type = 'success') {
-            const toast = document.getElementById('toast');
-            toast.textContent = msg;
-            toast.className = 'toast show ' + type;
-            setTimeout(() => toast.classList.remove('show'), 3000);
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.className = `toast show ${type}`;
+            setTimeout(() => t.classList.remove('show'), 3000);
         }
 
-        // --- Data Loading ---
         async function loadInitialData() {
             try {
-                // Constants
-                const constRes = await fetch('/api/constants');
-                constants = await constRes.json();
-                renderCountrySelector();
+                // 1. Settings
+                const sRes = await fetch('/api/settings');
+                currentSettings = await sRes.json();
 
-                // Platforms (Fetch if not in constants)
-                if (!constants.platforms) {
-                    const platRes = await fetch('/api/platforms');
-                    constants.platforms = await platRes.json();
-                }
+                // Populate General
+                document.getElementById('tmdb_api_key').value = currentSettings.general.tmdb_api_key || '';
 
-                renderDashboardCards();
+                // Populate Radarr
+                document.getElementById('radarr_url').value = currentSettings.radarr.url || '';
+                document.getElementById('radarr_api_key').value = currentSettings.radarr.api_key || '';
+                document.getElementById('radarr_search').checked = currentSettings.radarr.search_on_add;
 
-                // Settings
-                const setRes = await fetch('/api/settings');
-                currentSettings = await setRes.json();
-                populateSettingsForm();
+                // Populate Sonarr
+                document.getElementById('sonarr_url').value = currentSettings.sonarr.url || '';
+                document.getElementById('sonarr_api_key').value = currentSettings.sonarr.api_key || '';
+                document.getElementById('sonarr_search').checked = currentSettings.sonarr.search_on_add;
 
-                // Status
-                updateStatus();
-                updateLogs();
+                // 2. Constants (Countries)
+                const cRes = await fetch('/api/constants');
+                const constants = await cRes.json();
+                renderCountries(constants.countries, currentSettings.general.countries);
+
+                // 3. Platforms
+                const pRes = await fetch('/api/platforms');
+                const platforms = await pRes.json();
+                renderPlatforms(platforms);
+
+                // 4. Scheduler Jobs (from settings)
+                renderSchedulerJobs(platforms, currentSettings.scheduler.jobs);
+
+                // Load Profiles/Folders if credentials exist
+                if (currentSettings.radarr.url && currentSettings.radarr.api_key) fetchRadarrData(true);
+                if (currentSettings.sonarr.url && currentSettings.sonarr.api_key) fetchSonarrData(true);
+
             } catch (e) {
-                showToast("Fehler beim Laden der Daten", "error");
                 console.error(e);
+                showToast("Error loading initial data", "error");
             }
         }
 
-        function renderDashboardCards() {
-            const container = document.getElementById('platforms-container');
+        function renderCountries(allCountries, selectedCodes) {
+            const container = document.getElementById('country-chips');
             container.innerHTML = '';
+            allCountries.forEach(c => {
+                const chip = document.createElement('div');
+                chip.className = `select-chip ${selectedCodes.includes(c.code) ? 'selected' : ''}`;
+                chip.textContent = c.name;
+                chip.dataset.code = c.code;
+                chip.onclick = () => chip.classList.toggle('selected');
+                container.appendChild(chip);
+            });
+        }
 
-            if (!constants.platforms) return;
-
-            constants.platforms.forEach(p => {
+        function renderPlatforms(platforms) {
+            const container = document.getElementById('platforms-grid');
+            container.innerHTML = '';
+            platforms.forEach(p => {
                 const card = document.createElement('div');
                 card.className = 'platform-card';
-
-                // Determine color variable based on ID
-                const colorVar = `var(--${p.id}-color, var(--accent-color))`;
-
                 card.innerHTML = `
                     <div class="platform-header">
-                        <div class="platform-logo" style="color: ${colorVar};">${p.name}</div>
+                        <span class="platform-logo" style="color: var(--${p.id}-color, #fff)">${p.name}</span>
                     </div>
                     <div class="platform-actions">
                         <button class="action-btn" onclick="triggerJob('${p.id}_movies', this)">
-                            <span>🎬</span> Filme
+                            Movies
                         </button>
                         <button class="action-btn" onclick="triggerJob('${p.id}_series', this)">
-                            <span>📺</span> Serien
+                            Series
                         </button>
                         <button class="action-btn full-width" onclick="triggerJob('${p.id}_all', this)">
-                            <span>🚀</span> Beide ausführen
+                            Run Both
                         </button>
                     </div>
                 `;
@@ -685,111 +678,30 @@
             });
         }
 
-        function renderCountrySelector() {
-            const container = document.getElementById('country-selector');
-            container.innerHTML = '';
-
-            if (constants.countries) {
-                constants.countries.forEach(c => {
-                    const chip = document.createElement('div');
-                    chip.className = 'select-chip';
-                    chip.textContent = c.name;
-                    chip.dataset.code = c.code;
-
-                    chip.onclick = () => {
-                        chip.classList.toggle('selected');
-                    };
-                    container.appendChild(chip);
-                });
-            }
-        }
-
-        function populateSettingsForm() {
-            // General
-            document.getElementById('tmdb_api_key').value = currentSettings?.general?.tmdb_api_key || '';
-
-            const selectedCountries = currentSettings?.general?.countries || [];
-            document.querySelectorAll('.select-chip').forEach(chip => {
-                if (selectedCountries.includes(chip.dataset.code)) {
-                    chip.classList.add('selected');
-                }
-            });
-
-            // Scheduler
-            renderSchedulerSettings();
-
-            // Radarr
-            document.getElementById('radarr_url').value = currentSettings?.radarr?.url || '';
-            document.getElementById('radarr_api_key').value = currentSettings?.radarr?.api_key || '';
-            document.getElementById('radarr_search').checked = currentSettings?.radarr?.search_on_add;
-
-            // Pre-fill dropdowns if we have IDs, but we might need to fetch options first.
-            if (currentSettings?.radarr?.url && currentSettings?.radarr?.api_key) {
-                fetchRadarrData(true); // silent fetch
-            }
-
-            // Sonarr
-            document.getElementById('sonarr_url').value = currentSettings?.sonarr?.url || '';
-            document.getElementById('sonarr_api_key').value = currentSettings?.sonarr?.api_key || '';
-            document.getElementById('sonarr_search').checked = currentSettings?.sonarr?.search_on_add;
-
-            if (currentSettings?.sonarr?.url && currentSettings?.sonarr?.api_key) {
-                fetchSonarrData(true); // silent fetch
-            }
-        }
-
-        function renderSchedulerSettings() {
+        function renderSchedulerJobs(platforms, jobsConfig) {
             const container = document.getElementById('scheduler-settings-container');
             container.innerHTML = '';
 
-            const jobs = currentSettings?.scheduler?.jobs || {};
-
-            if (constants.platforms) {
-                _renderSchedulerRows(container, jobs, constants.platforms);
-            }
-        }
-
-        function _renderSchedulerRows(container, jobs, platforms) {
-            if (!platforms) return;
-
             platforms.forEach(p => {
-                // Movies
-                const movieKey = `${p.id}_movies`;
-                const movieJob = jobs[movieKey] || { enabled: false, time: "04:00" };
+                ['movies', 'series'].forEach(type => {
+                    const key = `${p.id}_${type}`;
+                    const config = jobsConfig[key] || { enabled: false, time: "04:00" };
 
-                // Series
-                const seriesKey = `${p.id}_series`;
-                const seriesJob = jobs[seriesKey] || { enabled: false, time: "04:15" };
+                    const row = document.createElement('div');
+                    row.className = 'form-group';
+                    row.style.display = 'flex';
+                    row.style.justifyContent = 'space-between';
+                    row.style.alignItems = 'center';
 
-                const row = document.createElement('div');
-                row.style.marginBottom = "15px";
-                row.style.padding = "15px";
-                row.style.backgroundColor = "rgba(255,255,255,0.02)";
-                row.style.border = "1px solid var(--border-color)";
-                row.style.borderRadius = "8px";
-
-                row.innerHTML = `
-                    <h4 style="margin-bottom: 15px; color: var(--${p.id}-color, var(--accent-color)); font-weight: 700;">${p.name}</h4>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                        <!-- Movies -->
-                        <div>
-                            <label style="display:flex; align-items:center; gap: 10px; margin-bottom: 8px; cursor: pointer;">
-                                <input type="checkbox" class="sched-enable" data-key="${movieKey}" ${movieJob.enabled ? 'checked' : ''}>
-                                <span style="font-weight: 500;">Filme aktivieren</span>
-                            </label>
-                            <input type="time" class="form-control sched-time" data-key="${movieKey}" value="${movieJob.time}">
+                    row.innerHTML = `
+                        <label style="margin:0; width: 200px;">${p.name} ${type === 'movies' ? 'Movies' : 'Series'}</label>
+                        <div style="display:flex; gap: 10px; align-items: center;">
+                            <input type="checkbox" class="sched-enable" data-key="${key}" ${config.enabled ? 'checked' : ''}>
+                            <input type="time" class="sched-time form-control" data-key="${key}" value="${config.time}" style="width: 100px;">
                         </div>
-                        <!-- Series -->
-                        <div>
-                            <label style="display:flex; align-items:center; gap: 10px; margin-bottom: 8px; cursor: pointer;">
-                                <input type="checkbox" class="sched-enable" data-key="${seriesKey}" ${seriesJob.enabled ? 'checked' : ''}>
-                                <span style="font-weight: 500;">Serien aktivieren</span>
-                            </label>
-                            <input type="time" class="form-control sched-time" data-key="${seriesKey}" value="${seriesJob.time}">
-                        </div>
-                    </div>
-                `;
-                container.appendChild(row);
+                    `;
+                    container.appendChild(row);
+                });
             });
         }
 
@@ -798,7 +710,7 @@
             const key = document.getElementById('radarr_api_key').value;
             if (!url || !key) return;
 
-            if (!silent) showToast("Verbinde mit Radarr...", "success");
+            if (!silent) showToast("Connecting to Radarr...", "success");
 
             try {
                 // Profiles
@@ -841,9 +753,9 @@
                 });
                 fSelect.value = currentSettings?.radarr?.root_folder_path;
 
-                if (!silent) showToast("Radarr Daten geladen!", "success");
+                if (!silent) showToast("Radarr data loaded!", "success");
             } catch (e) {
-                if (!silent) showToast("Fehler bei Radarr Verbindung: " + e.message, "error");
+                if (!silent) showToast("Error connecting to Radarr: " + e.message, "error");
             }
         }
 
@@ -852,7 +764,7 @@
             const key = document.getElementById('sonarr_api_key').value;
             if (!url || !key) return;
 
-            if (!silent) showToast("Verbinde mit Sonarr...", "success");
+            if (!silent) showToast("Connecting to Sonarr...", "success");
 
             try {
                 // Profiles
@@ -895,9 +807,9 @@
                 });
                 fSelect.value = currentSettings?.sonarr?.root_folder_path;
 
-                if (!silent) showToast("Sonarr Daten geladen!", "success");
+                if (!silent) showToast("Sonarr data loaded!", "success");
             } catch (e) {
-                if (!silent) showToast("Fehler bei Sonarr Verbindung: " + e.message, "error");
+                if (!silent) showToast("Error connecting to Sonarr: " + e.message, "error");
             }
         }
 
@@ -947,13 +859,13 @@
                 const data = await res.json();
 
                 if (data.status === 'success') {
-                    showToast("Einstellungen gespeichert!", "success");
+                    showToast("Settings saved!", "success");
                     currentSettings = newSettings;
                 } else {
-                    showToast("Fehler beim Speichern", "error");
+                    showToast("Error saving settings", "error");
                 }
             } catch (e) {
-                showToast("Netzwerkfehler beim Speichern", "error");
+                showToast("Network error while saving", "error");
             }
         }
 
@@ -966,10 +878,10 @@
 
                 if (data.scheduler_running) {
                     statusEl.className = "status-indicator running";
-                    statusText.textContent = "Aktiv";
+                    statusText.textContent = "Active";
                 } else {
                     statusEl.className = "status-indicator stopped";
-                    statusText.textContent = "Gestoppt";
+                    statusText.textContent = "Stopped";
                 }
 
                 document.getElementById('job-count').textContent = data.job_count;
@@ -1017,7 +929,7 @@
             // Handle "all" trigger separately
             if (jobId.endsWith('_all')) {
                 const baseId = jobId.replace('_all', '');
-                const confirmed = await showConfirmModal(`Wirklich Filme UND Serien für ${baseId} starten?`);
+                const confirmed = await showConfirmModal(`Really start Movies AND Series for ${baseId}?`);
                 if (!confirmed) return;
 
                 // Trigger both sequentially
@@ -1027,7 +939,7 @@
             }
 
             if (!silent) {
-                const confirmed = await showConfirmModal(`Job '${jobId}' wirklich starten?`);
+                const confirmed = await showConfirmModal(`Really start job '${jobId}'?`);
                 if (!confirmed) return;
             }
 
@@ -1041,7 +953,7 @@
                 updateLogs();
             } catch (e) {
                 console.error(e);
-                showToast("Fehler beim Starten des Jobs", "error");
+                showToast("Error starting job", "error");
             } finally {
                 if (btnElement) setTimeout(() => btnElement.classList.remove('running'), 2000);
             }
