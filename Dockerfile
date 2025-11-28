@@ -17,7 +17,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Port für Web UI
-EXPOSE 8000
+EXPOSE 9000
 
 # Startbefehl
 CMD ["python", "main.py"]

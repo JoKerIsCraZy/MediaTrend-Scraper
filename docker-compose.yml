@@ -5,7 +5,7 @@ services:
     build: .
     container_name: media-top-lists
     ports:
-      - "8000:8000"
+      - "9000:9000"
     volumes:
       - ./settings.json:/app/settings.json
     restart: unless-stopped
