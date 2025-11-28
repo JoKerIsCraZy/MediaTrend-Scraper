@@ -27,6 +27,16 @@
             --peacock-color: #000000;
             --paramount-color: #0064ff;
             --apple-color: #A2AAAD;
+            --discovery-color: #0045A0;
+            --star-color: #FF5A00;
+            --rakuten-color: #BF0000;
+            --google-color: #4285F4;
+            --crunchyroll-color: #F47521;
+            --bbc-color: #F54997;
+            --joyn-color: #333333;
+            --rtl-color: #00E1D2;
+            --sky-color: #0072C9;
+            --canal-color: #111111;
         }
 
         * {
@@ -428,13 +438,13 @@
 <body>
     <div class="sidebar">
         <div class="brand">MediaTrend</div>
-        <div class="nav-item active" onclick="switchView('dashboard', this)">
+        <div id="nav-dashboard" class="nav-item active" onclick="switchView('dashboard', this)">
             Dashboard
         </div>
-        <div class="nav-item" onclick="switchView('settings', this)">
+        <div id="nav-settings" class="nav-item" onclick="switchView('settings', this)">
             Settings
         </div>
-        <div class="nav-item" onclick="switchView('logs', this)">
+        <div id="nav-logs" class="nav-item" onclick="switchView('logs', this)">
             Logs
         </div>
 
@@ -452,7 +462,12 @@
     <div class="main-content">
         <!-- Dashboard View -->
         <div id="dashboard-view" class="view active">
-            <h1>Dashboard</h1>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <h1>Dashboard</h1>
+                <button class="btn btn-primary" onclick="runAllJobs()" id="btn-run-all">
+                    Run All Jobs
+                </button>
+            </div>
             <p class="subtitle">Manage your media scraping jobs.</p>
             <div class="platforms-grid" id="platforms-grid">
                 <!-- Populated by JS -->
@@ -658,19 +673,6 @@
             }
         }
 
-        function renderCountries(allCountries, selectedCodes) {
-            const container = document.getElementById('country-chips');
-            container.innerHTML = '';
-            allCountries.forEach(c => {
-                const chip = document.createElement('div');
-                chip.className = `select-chip ${selectedCodes.includes(c.code) ? 'selected' : ''}`;
-                chip.textContent = c.name;
-                chip.dataset.code = c.code;
-                chip.onclick = () => chip.classList.toggle('selected');
-                container.appendChild(chip);
-            });
-        }
-
         function renderPlatforms(platforms) {
             const container = document.getElementById('platforms-grid');
             container.innerHTML = '';
@@ -682,13 +684,13 @@
                         <span class="platform-logo" style="color: var(--${p.id}-color, #fff)">${p.name}</span>
                     </div>
                     <div class="platform-actions">
-                        <button class="action-btn" onclick="triggerJob('${p.id}_movies', this)">
+                        <button class="action-btn" onclick="runJob('${p.id}_movies', this)">
                             Movies
                         </button>
-                        <button class="action-btn" onclick="triggerJob('${p.id}_series', this)">
+                        <button class="action-btn" onclick="runJob('${p.id}_series', this)">
                             Series
                         </button>
-                        <button class="action-btn full-width" onclick="triggerJob('${p.id}_all', this)">
+                        <button class="action-btn full-width" onclick="runBoth('${p.id}', this)">
                             Run Both
                         </button>
                     </div>
@@ -697,158 +699,75 @@
             });
         }
 
-        function renderSchedulerJobs(platforms, jobsConfig) {
+        function renderSchedulerJobs(platforms, jobs) {
             const container = document.getElementById('scheduler-settings-container');
             container.innerHTML = '';
 
             platforms.forEach(p => {
+                const pDiv = document.createElement('div');
+                pDiv.style.marginBottom = '15px';
+                pDiv.innerHTML = `<h4 style="margin-bottom:10px; color: var(--${p.id}-color, #fff)">${p.name}</h4>`;
+
                 ['movies', 'series'].forEach(type => {
                     const key = `${p.id}_${type}`;
-                    const config = jobsConfig[key] || { enabled: false, time: "04:00" };
+                    const job = jobs[key] || { enabled: false, time: "04:00" };
 
                     const row = document.createElement('div');
-                    row.className = 'form-group';
                     row.style.display = 'flex';
-                    row.style.justifyContent = 'space-between';
                     row.style.alignItems = 'center';
-
+                    row.style.gap = '15px';
+                    row.style.marginBottom = '5px';
                     row.innerHTML = `
-                        <label style="margin:0; width: 200px;">${p.name} ${type === 'movies' ? 'Movies' : 'Series'}</label>
-                        <div style="display:flex; gap: 10px; align-items: center;">
-                            <input type="checkbox" class="sched-enable" data-key="${key}" ${config.enabled ? 'checked' : ''}>
-                            <input type="time" class="sched-time form-control" data-key="${key}" value="${config.time}" style="width: 100px;">
-                        </div>
+                        <div style="width: 80px; font-size: 0.9rem; color: var(--text-secondary)">${type === 'movies' ? 'Movies' : 'Series'}</div>
+                        <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                            <input type="checkbox" id="job_enabled_${key}" ${job.enabled ? 'checked' : ''}> Enable
+                        </label>
+                        <input type="time" id="job_time_${key}" value="${job.time}" class="form-control" style="width: 120px;">
                     `;
-                    container.appendChild(row);
+                    pDiv.appendChild(row);
                 });
+
+                container.appendChild(pDiv);
             });
         }
 
-        async function fetchRadarrData(silent = false) {
-            const url = document.getElementById('radarr_url').value;
-            const key = document.getElementById('radarr_api_key').value;
-            if (!url || !key) return;
-
-            if (!silent) showToast("Connecting to Radarr...", "success");
-
-            try {
-                // Profiles
-                const pRes = await fetch('/api/radarr/profiles', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ url, api_key: key })
-                });
-                const profiles = await pRes.json();
-
-                const pSelect = document.getElementById('radarr_profile');
-                pSelect.innerHTML = '';
-                if (profiles.error) throw new Error(profiles.error);
-
-                profiles.forEach(p => {
-                    const opt = document.createElement('option');
-                    opt.value = p.id;
-                    opt.textContent = p.name;
-                    pSelect.appendChild(opt);
-                });
-                pSelect.value = currentSettings?.radarr?.quality_profile_id;
-
-                // Folders
-                const fRes = await fetch('/api/radarr/folders', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ url, api_key: key })
-                });
-                const folders = await fRes.json();
-
-                const fSelect = document.getElementById('radarr_folder');
-                fSelect.innerHTML = '';
-                if (folders.error) throw new Error(folders.error);
-
-                folders.forEach(f => {
-                    const opt = document.createElement('option');
-                    opt.value = f.path;
-                    opt.textContent = f.path;
-                    fSelect.appendChild(opt);
-                });
-                fSelect.value = currentSettings?.radarr?.root_folder_path;
-
-                if (!silent) showToast("Radarr data loaded!", "success");
-            } catch (e) {
-                if (!silent) showToast("Error connecting to Radarr: " + e.message, "error");
-            }
-        }
-
-        async function fetchSonarrData(silent = false) {
-            const url = document.getElementById('sonarr_url').value;
-            const key = document.getElementById('sonarr_api_key').value;
-            if (!url || !key) return;
-
-            if (!silent) showToast("Connecting to Sonarr...", "success");
-
-            try {
-                // Profiles
-                const pRes = await fetch('/api/sonarr/profiles', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ url, api_key: key })
-                });
-                const profiles = await pRes.json();
-
-                const pSelect = document.getElementById('sonarr_profile');
-                pSelect.innerHTML = '';
-                if (profiles.error) throw new Error(profiles.error);
-
-                profiles.forEach(p => {
-                    const opt = document.createElement('option');
-                    opt.value = p.id;
-                    opt.textContent = p.name;
-                    pSelect.appendChild(opt);
-                });
-                pSelect.value = currentSettings?.sonarr?.quality_profile_id;
-
-                // Folders
-                const fRes = await fetch('/api/sonarr/folders', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ url, api_key: key })
-                });
-                const folders = await fRes.json();
-
-                const fSelect = document.getElementById('sonarr_folder');
-                fSelect.innerHTML = '';
-                if (folders.error) throw new Error(folders.error);
-
-                folders.forEach(f => {
-                    const opt = document.createElement('option');
-                    opt.value = f.path;
-                    opt.textContent = f.path;
-                    fSelect.appendChild(opt);
-                });
-                fSelect.value = currentSettings?.sonarr?.root_folder_path;
-
-                if (!silent) showToast("Sonarr data loaded!", "success");
-            } catch (e) {
-                if (!silent) showToast("Error connecting to Sonarr: " + e.message, "error");
-            }
+        function renderCountries(allCountries, selectedCountries) {
+            const container = document.getElementById('country-chips');
+            container.innerHTML = '';
+            allCountries.forEach(c => {
+                const chip = document.createElement('div');
+                const isSelected = selectedCountries.includes(c.code);
+                
+                chip.className = `select-chip ${isSelected ? 'selected' : ''}`;
+                chip.textContent = `${c.name} (${c.code})`;
+                chip.dataset.code = c.code;
+                
+                chip.onclick = () => {
+                    chip.classList.toggle('selected');
+                };
+                container.appendChild(chip);
+            });
         }
 
         async function saveSettings() {
-            // Collect Scheduler Data
-            const schedulerJobs = {};
-
-            document.querySelectorAll('.sched-enable').forEach(cb => {
-                const key = cb.dataset.key;
-                const timeInput = document.querySelector(`.sched-time[data-key="${key}"]`);
-                schedulerJobs[key] = {
-                    enabled: cb.checked,
-                    time: timeInput.value
+            // Collect Data
+            const selectedCountries = Array.from(document.querySelectorAll('.select-chip.selected'))
+                                           .map(el => el.dataset.code);
+            
+            const jobs = {};
+            document.querySelectorAll('[id^="job_enabled_"]').forEach(el => {
+                const key = el.id.replace('job_enabled_', '');
+                const time = document.getElementById(`job_time_${key}`).value;
+                jobs[key] = {
+                    enabled: el.checked,
+                    time: time
                 };
             });
 
             const newSettings = {
                 general: {
                     tmdb_api_key: document.getElementById('tmdb_api_key').value,
-                    countries: Array.from(document.querySelectorAll('.select-chip.selected')).map(c => c.dataset.code)
+                    countries: selectedCountries
                 },
                 auth: {
                     enabled: document.getElementById('auth_enabled').checked,
@@ -856,7 +775,7 @@
                     password: document.getElementById('auth_password').value
                 },
                 scheduler: {
-                    jobs: schedulerJobs
+                    jobs: jobs
                 },
                 radarr: {
                     url: document.getElementById('radarr_url').value,
@@ -883,110 +802,239 @@
                 const data = await res.json();
 
                 if (data.status === 'success') {
-                    showToast("Settings saved!", "success");
-                    currentSettings = newSettings;
+                    showToast("Settings saved successfully!");
+                    currentSettings = newSettings; // Update local state
                 } else {
-                    showToast("Error saving settings", "error");
+                    showToast("Error saving settings: " + data.message, 'error');
                 }
             } catch (e) {
-                showToast("Network error while saving", "error");
+                showToast("Network error saving settings", 'error');
             }
         }
 
-        async function updateStatus() {
+        async function clearLogsAndSwitch() {
             try {
-                const res = await fetch('/api/status');
-                const data = await res.json();
-                const statusEl = document.getElementById('scheduler-status-dot');
-                const statusText = document.getElementById('scheduler-status-text');
+                await fetch('/api/logs/clear', { method: 'POST' });
+                document.getElementById('log-box').textContent = ''; // Clear locally too
+                switchView('logs', document.getElementById('nav-logs'));
+            } catch (e) {
+                console.error("Failed to clear logs", e);
+            }
+        }
 
-                if (data.scheduler_running) {
-                    statusEl.className = "status-indicator running";
-                    statusText.textContent = "Active";
+        async function runJob(jobKey, btn, clearLogs = true) {
+            if (clearLogs) {
+                await clearLogsAndSwitch();
+            }
+            
+            if (btn) btn.classList.add('running');
+            try {
+                const res = await fetch(`/api/run-job/${jobKey}`, { method: 'POST' });
+                const data = await res.json();
+                showToast(data.message);
+            } catch (e) {
+                showToast("Error starting job", 'error');
+            } finally {
+                if (btn) setTimeout(() => btn.classList.remove('running'), 2000);
+            }
+        }
+
+        async function runBoth(platformId, btn) {
+            await clearLogsAndSwitch();
+            
+            if (btn) btn.classList.add('running');
+            // Pass false to skip clearing logs again
+            runJob(`${platformId}_movies`, null, false);
+            setTimeout(() => runJob(`${platformId}_series`, null, false), 1000); 
+            setTimeout(() => { if (btn) btn.classList.remove('running'); }, 2000);
+        }
+
+        async function runAllJobs() {
+            if (!confirm("Are you sure you want to run ALL jobs sequentially? This might take a while.")) return;
+            
+            await clearLogsAndSwitch();
+
+            const btn = document.getElementById('btn-run-all');
+            btn.disabled = true;
+            btn.textContent = "Starting...";
+            
+            try {
+                const res = await fetch('/api/run-all', { method: 'POST' });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    showToast(data.message, 'success');
                 } else {
-                    statusEl.className = "status-indicator stopped";
-                    statusText.textContent = "Stopped";
+                    showToast(data.message, 'error');
                 }
-
-                document.getElementById('job-count').textContent = data.job_count;
             } catch (e) {
-                console.error(e);
+                showToast("Error starting jobs: " + e.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = "Run All Jobs";
             }
         }
 
-        async function updateLogs() {
+        async function fetchRadarrData(silent = false) {
+            const url = document.getElementById('radarr_url').value;
+            const key = document.getElementById('radarr_api_key').value;
+            if (!url || !key) {
+                if (!silent) showToast("Please enter Radarr URL and API Key", 'error');
+                return;
+            }
+
             try {
-                const res = await fetch('/api/logs');
-                const data = await res.json();
-                const logBox = document.getElementById('log-box');
-                const wasAtBottom = logBox.scrollHeight - logBox.scrollTop === logBox.clientHeight;
+                // Profiles
+                const pRes = await fetch('/api/radarr/profiles', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url, api_key: key })
+                });
+                const profiles = await pRes.json();
+                
+                const pSelect = document.getElementById('radarr_profile');
+                pSelect.innerHTML = '';
+                if (profiles.error) throw new Error(profiles.error);
+                
+                profiles.forEach(p => {
+                    const opt = document.createElement('option');
+                    opt.value = p.id;
+                    opt.textContent = p.name;
+                    if (currentSettings.radarr && currentSettings.radarr.quality_profile_id === p.id) opt.selected = true;
+                    pSelect.appendChild(opt);
+                });
 
-                logBox.textContent = data.logs.join('\n');
+                // Folders
+                const fRes = await fetch('/api/radarr/folders', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url, api_key: key })
+                });
+                const folders = await fRes.json();
+                
+                const fSelect = document.getElementById('radarr_folder');
+                fSelect.innerHTML = '';
+                if (folders.error) throw new Error(folders.error);
 
-                if (wasAtBottom) logBox.scrollTop = logBox.scrollHeight;
+                folders.forEach(f => {
+                    const opt = document.createElement('option');
+                    opt.value = f.path;
+                    opt.textContent = f.path;
+                    if (currentSettings.radarr && currentSettings.radarr.root_folder_path === f.path) opt.selected = true;
+                    fSelect.appendChild(opt);
+                });
+
+                if (!silent) showToast("Radarr data loaded!");
+
             } catch (e) {
-                console.error(e);
+                if (!silent) showToast("Error connecting to Radarr: " + e.message, 'error');
             }
         }
 
-        let modalResolve = null;
+        async function fetchSonarrData(silent = false) {
+            const url = document.getElementById('sonarr_url').value;
+            const key = document.getElementById('sonarr_api_key').value;
+            if (!url || !key) {
+                if (!silent) showToast("Please enter Sonarr URL and API Key", 'error');
+                return;
+            }
 
-        function showConfirmModal(msg) {
-            return new Promise((resolve) => {
-                document.getElementById('modal-message').textContent = msg;
-                document.getElementById('confirm-modal').classList.add('show');
-                modalResolve = resolve;
-            });
+            try {
+                // Profiles
+                const pRes = await fetch('/api/sonarr/profiles', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url, api_key: key })
+                });
+                const profiles = await pRes.json();
+
+                const pSelect = document.getElementById('sonarr_profile');
+                pSelect.innerHTML = '';
+                if (profiles.error) throw new Error(profiles.error);
+
+                profiles.forEach(p => {
+                    const opt = document.createElement('option');
+                    opt.value = p.id;
+                    opt.textContent = p.name;
+                    if (currentSettings.sonarr && currentSettings.sonarr.quality_profile_id === p.id) opt.selected = true;
+                    pSelect.appendChild(opt);
+                });
+
+                // Folders
+                const fRes = await fetch('/api/sonarr/folders', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url, api_key: key })
+                });
+                const folders = await fRes.json();
+
+                const fSelect = document.getElementById('sonarr_folder');
+                fSelect.innerHTML = '';
+                if (folders.error) throw new Error(folders.error);
+
+                folders.forEach(f => {
+                    const opt = document.createElement('option');
+                    opt.value = f.path;
+                    opt.textContent = f.path;
+                    if (currentSettings.sonarr && currentSettings.sonarr.root_folder_path === f.path) opt.selected = true;
+                    fSelect.appendChild(opt);
+                });
+
+                if (!silent) showToast("Sonarr data loaded!");
+
+            } catch (e) {
+                if (!silent) showToast("Error connecting to Sonarr: " + e.message, 'error');
+            }
+        }
+
+        // Modal Logic
+        let modalCallback = null;
+        function showConfirm(msg, cb) {
+            document.getElementById('modal-message').textContent = msg;
+            document.getElementById('confirm-modal').classList.add('show');
+            modalCallback = cb;
         }
 
         function closeModal(result) {
             document.getElementById('confirm-modal').classList.remove('show');
-            if (modalResolve) {
-                modalResolve(result);
-                modalResolve = null;
-            }
+            if (modalCallback) modalCallback(result);
+            modalCallback = null;
         }
 
-        async function triggerJob(jobId, btnElement, silent = false) {
-            console.log(`Triggering job: ${jobId}, silent: ${silent}`);
-
-            // Handle "all" trigger separately
-            if (jobId.endsWith('_all')) {
-                const baseId = jobId.replace('_all', '');
-                const confirmed = await showConfirmModal(`Really start Movies AND Series for ${baseId}?`);
-                if (!confirmed) return;
-
-                // Trigger both sequentially
-                await triggerJob(`${baseId}_movies`, btnElement, true); // silent confirm
-                await triggerJob(`${baseId}_series`, btnElement, true);
-                return;
-            }
-
-            if (!silent) {
-                const confirmed = await showConfirmModal(`Really start job '${jobId}'?`);
-                if (!confirmed) return;
-            }
-
-            // Button animation
-            if (btnElement) btnElement.classList.add('running');
-
+        // Poll Status
+        setInterval(async () => {
             try {
-                const res = await fetch(`/api/run/${jobId}`, { method: 'POST' });
+                const res = await fetch('/api/status');
                 const data = await res.json();
-                showToast(data.message, data.status === 'success' ? 'success' : 'error');
-                updateLogs();
-            } catch (e) {
-                console.error(e);
-                showToast("Error starting job", "error");
-            } finally {
-                if (btnElement) setTimeout(() => btnElement.classList.remove('running'), 2000);
-            }
-        }
+                
+                const dot = document.getElementById('scheduler-status-dot');
+                const text = document.getElementById('scheduler-status-text');
+                const count = document.getElementById('job-count');
 
-        // Init
-        setInterval(updateStatus, 5000);
-        setInterval(updateLogs, 3000);
-        loadInitialData();
+                if (data.scheduler_running) {
+                    dot.className = 'status-indicator running';
+                    text.textContent = 'Running';
+                } else {
+                    dot.className = 'status-indicator stopped';
+                    text.textContent = 'Stopped';
+                }
+                count.textContent = data.job_count;
+
+            } catch (e) { }
+        }, 5000);
+
+        // Poll Logs
+        setInterval(async () => {
+            if (!document.getElementById('logs-view').classList.contains('active')) return;
+            try {
+                const res = await fetch('/api/logs');
+                const data = await res.json();
+                const logBox = document.getElementById('log-box');
+                logBox.textContent = data.logs.join('\n');
+                logBox.scrollTop = logBox.scrollHeight;
+            } catch (e) { }
+        }, 2000);
+
+        window.onload = loadInitialData;
     </script>
 </body>
 

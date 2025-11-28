@@ -30,7 +30,11 @@ async def fetch_tudum_html(country_code: str, media_type: str = "film") -> str |
         url += "/tv"
     # --- ENDE NEUE URL-LOGIK ---
 
-    headers = {"User-Agent": USER_AGENT, "Accept-Language": "en-US,en;q=0.9"}
+    headers = {
+        "User-Agent": USER_AGENT, 
+        "Accept-Language": "en-US,en;q=0.9",
+        "Accept-Encoding": "gzip, deflate"
+    }
     try:
         text = await AsyncClient.get(url, headers=headers, timeout=20)
         if text:
@@ -41,20 +45,35 @@ async def fetch_tudum_html(country_code: str, media_type: str = "film") -> str |
         menu.log_error(f"Tudum HTML-Abruffehler für {country_code} ({media_type}): {e}")
     return None
 
-def parse_tudum_table(table_soup: BeautifulSoup) -> List[str]:
-    """Parst eine einzelne Tudum-Tabelle (Film oder TV) und gibt Titellisten zurück."""
+def parse_tudum_list(soup: BeautifulSoup) -> List[str]:
+    """Parst die Tudum-Liste und gibt Titellisten zurück."""
     titles = []
-    if not table_soup:
+    if not soup:
         return []
         
-    title_cells = table_soup.find_all("td", class_="title")
-
-    for cell in title_cells:
-        button = cell.find("button")
-        if button:
-            title = button.get_text(strip=True)
-            if title:
-                titles.append(title)
+    # Heuristik: Wir suchen nach der ul, die die meisten Bilder mit alt-Text enthält.
+    # Das ist robuster als sich auf kryptische CSS-Klassen zu verlassen.
+    uls = soup.find_all("ul")
+    best_ul = None
+    max_titles = 0
+    
+    for ul in uls:
+        current_titles = []
+        lis = ul.find_all("li")
+        for li in lis:
+            # Wir suchen nach einem Bild im li, das einen alt-Text hat
+            img = li.find("img")
+            if img and img.get("alt"):
+                title = img.get("alt").strip()
+                if title:
+                    current_titles.append(title)
+        
+        # Wir nehmen die Liste mit den meisten Treffern (wahrscheinlich die Top 10)
+        if len(current_titles) > max_titles:
+            max_titles = len(current_titles)
+            best_ul = ul
+            titles = current_titles
+            
     return titles
 
 async def scrape_netflix(country_code: str, media_type: MediaType) -> List[str]:
@@ -65,9 +84,6 @@ async def scrape_netflix(country_code: str, media_type: MediaType) -> List[str]:
         return []
 
     soup = BeautifulSoup(html, "html.parser")
-    table = soup.find("div", {"data-uia": "top10-table"})
-    if not table:
-        menu.log_warn(f"[{country_code}] Konnte keine Tabelle für {media_type.value} finden.")
-        return []
-        
-    return parse_tudum_table(table)
+    
+    # Die alte Tabelle gibt es nicht mehr. Wir parsen jetzt die Liste.
+    return parse_tudum_list(soup)

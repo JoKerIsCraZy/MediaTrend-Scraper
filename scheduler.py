@@ -111,3 +111,30 @@ class SchedulerService:
         func = self._create_job_func(job_key)
         await func()
 
+    async def run_all_jobs_sequentially(self):
+        """Executes all configured jobs sequentially."""
+        menu.log("Starting execution of ALL jobs sequentially...")
+        
+        # Get all configured jobs from settings
+        scheduler_config = self.config.get("scheduler", {}).get("jobs", {})
+        
+        # We iterate through SUPPORTED_PLATFORMS to maintain a logical order
+        for platform in settings.SUPPORTED_PLATFORMS:
+            p_id = platform["id"]
+            
+            # Check for movies job
+            movies_key = f"{p_id}_movies"
+            if movies_key in scheduler_config: # Only run if it exists in config (even if disabled)
+                menu.log(f"--- Running {platform['name']} (Movies) ---")
+                await self.run_job_now(movies_key)
+                await asyncio.sleep(2) # Small pause between jobs
+
+            # Check for series job
+            series_key = f"{p_id}_series"
+            if series_key in scheduler_config:
+                menu.log(f"--- Running {platform['name']} (Series) ---")
+                await self.run_job_now(series_key)
+                await asyncio.sleep(2) # Small pause between jobs
+
+        menu.log("All jobs executed.")
+

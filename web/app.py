@@ -97,6 +97,11 @@ async def get_status(authorized: bool = Depends(check_auth)):
 async def get_logs(authorized: bool = Depends(check_auth)):
     return {"logs": LOG_BUFFER}
 
+@app.post("/api/logs/clear")
+async def clear_logs(authorized: bool = Depends(check_auth)):
+    LOG_BUFFER.clear()
+    return {"status": "success", "message": "Logs cleared"}
+
 
 
 # --- Settings API ---
@@ -122,14 +127,21 @@ async def update_settings(new_settings: Dict[str, Any], authorized: bool = Depen
 async def get_platforms(authorized: bool = Depends(check_auth)):
     return settings.SUPPORTED_PLATFORMS
 
-@app.post("/api/run/{job_key}")
+@app.post("/api/run-job/{job_key}")
 async def run_job(job_key: str, background_tasks: BackgroundTasks, authorized: bool = Depends(check_auth)):
     if not scheduler_service:
         return {"message": "Scheduler not initialized.", "status": "error"}
     
-    # Start job in background
     background_tasks.add_task(scheduler_service.run_job_now, job_key)
-    return {"message": f"Job '{job_key}' started.", "status": "success"}
+    return {"status": "success", "message": f"Job '{job_key}' started in background."}
+
+@app.post("/api/run-all")
+async def run_all_jobs(background_tasks: BackgroundTasks, authorized: bool = Depends(check_auth)):
+    if not scheduler_service:
+        return {"message": "Scheduler not initialized.", "status": "error"}
+
+    background_tasks.add_task(scheduler_service.run_all_jobs_sequentially)
+    return {"status": "success", "message": "All jobs started sequentially in background."}
 
 @app.get("/api/constants")
 async def get_constants(authorized: bool = Depends(check_auth)):
@@ -181,4 +193,4 @@ def start_web_server():
     """Starts the Uvicorn server."""
     # We must ensure we are in the correct directory or adjust paths
     # Since main.py is in root, it should be fine.
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=9000)
