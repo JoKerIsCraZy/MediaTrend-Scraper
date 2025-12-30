@@ -8,6 +8,20 @@ services:
       - "9000:9000"
     volumes:
       - ./settings.json:/app/settings.json
+    environment:
+      # Server configuration
+      - MEDIATREND_HOST=0.0.0.0
+      - MEDIATREND_PORT=9000
+      # Optional: API keys can be set via environment variables instead of settings.json
+      # - MEDIATREND_TMDB_API_KEY=your_tmdb_api_key
+      # - MEDIATREND_RADARR_URL=http://your-radarr:7878
+      # - MEDIATREND_RADARR_API_KEY=your_radarr_api_key
+      # - MEDIATREND_SONARR_URL=http://your-sonarr:8989
+      # - MEDIATREND_SONARR_API_KEY=your_sonarr_api_key
+      # Optional: Authentication override
+      # - MEDIATREND_AUTH_ENABLED=true
+      # - MEDIATREND_AUTH_USERNAME=admin
+      # - MEDIATREND_AUTH_PASSWORD=secure_password
     restart: unless-stopped
 
   # Alternative: Build from source
@@ -18,4 +32,7 @@ services:
   #     - "9000:9000"
   #   volumes:
   #     - ./settings.json:/app/settings.json
+  #   environment:
+  #     - MEDIATREND_HOST=0.0.0.0
+  #     - MEDIATREND_PORT=9000
   #   restart: unless-stopped

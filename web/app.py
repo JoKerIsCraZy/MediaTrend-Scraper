@@ -9,6 +9,11 @@ from fastapi.staticfiles import StaticFiles
 import uvicorn
 import logging
 
+# Rate limiting
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+
 import settings
 from scheduler import SchedulerService
 import targets.radarr as radarr
@@ -18,7 +23,11 @@ from typing import List, Dict, Any
 
 
 # Global Instances
+limiter = Limiter(key_func=get_remote_address)
 app = FastAPI()
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 security = HTTPBasic(auto_error=False)
 scheduler_service = None
 config = None
@@ -42,9 +51,13 @@ utils.menu.log = web_logger
 utils.menu.log_warn = lambda m: web_logger(f"[WARN] {m}")
 utils.menu.log_error = lambda m: web_logger(f"[ERROR] {m}")
 
+import secrets
+from utils.password import verify_password, hash_password, needs_rehash
 
 def check_auth(credentials: HTTPBasicCredentials = Depends(security)):
     """Checks the credentials if authentication is enabled."""
+    global config
+    
     if not config or not config.get("auth", {}).get("enabled", False):
         return True
 
@@ -55,16 +68,29 @@ def check_auth(credentials: HTTPBasicCredentials = Depends(security)):
             headers={"WWW-Authenticate": "Basic"},
         )
 
-    correct_username = config["auth"]["username"]
-    correct_password = config["auth"]["password"]
+    # Support environment variable overrides for credentials
+    correct_username = os.environ.get("MEDIATREND_AUTH_USERNAME", config["auth"]["username"])
+    correct_password = os.environ.get("MEDIATREND_AUTH_PASSWORD", config["auth"]["password"])
 
-    # Simple string comparison (in production, use constant-time comparison)
-    if credentials.username != correct_username or credentials.password != correct_password:
+    # Use timing-safe comparison for username
+    username_match = secrets.compare_digest(credentials.username.encode('utf-8'), correct_username.encode('utf-8'))
+    
+    # Use bcrypt verification for password (handles both hashed and legacy plaintext)
+    password_match = verify_password(credentials.password, correct_password)
+    
+    if not (username_match and password_match):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Basic"},
         )
+    
+    # Auto-migrate plaintext password to bcrypt hash on successful login
+    if password_match and needs_rehash(config["auth"]["password"]) and not os.environ.get("MEDIATREND_AUTH_PASSWORD"):
+        config["auth"]["password"] = hash_password(credentials.password)
+        settings.save_settings(config)
+        web_logger("[SECURITY] Password migrated to bcrypt hash.")
+    
     return True
 
 
@@ -83,6 +109,7 @@ async def shutdown_event():
     web_logger("Webserver stopped.")
 
 @app.get("/", response_class=HTMLResponse)
+@limiter.limit("60/minute")
 async def read_root(request: Request, authorized: bool = Depends(check_auth)):
     return templates.TemplateResponse("index.html", {"request": request})
 
@@ -114,6 +141,14 @@ async def get_settings(authorized: bool = Depends(check_auth)):
 @app.post("/api/settings")
 async def update_settings(new_settings: Dict[str, Any], authorized: bool = Depends(check_auth)):
     global config
+    
+    # Hash password if it was changed and is not already a hash
+    if "auth" in new_settings and "password" in new_settings["auth"]:
+        new_password = new_settings["auth"]["password"]
+        if needs_rehash(new_password):
+            new_settings["auth"]["password"] = hash_password(new_password)
+            web_logger("[SECURITY] Password hashed before saving.")
+    
     settings.save_settings(new_settings)
     config = settings.load_settings()
     
@@ -129,7 +164,8 @@ async def get_platforms(authorized: bool = Depends(check_auth)):
     return settings.SUPPORTED_PLATFORMS
 
 @app.post("/api/run-job/{job_key}")
-async def run_job(job_key: str, background_tasks: BackgroundTasks, authorized: bool = Depends(check_auth)):
+@limiter.limit("10/minute")
+async def run_job(request: Request, job_key: str, background_tasks: BackgroundTasks, authorized: bool = Depends(check_auth)):
     if not scheduler_service:
         return {"message": "Scheduler not initialized.", "status": "error"}
     
@@ -137,7 +173,8 @@ async def run_job(job_key: str, background_tasks: BackgroundTasks, authorized: b
     return {"status": "success", "message": f"Job '{job_key}' started in background."}
 
 @app.post("/api/run-all")
-async def run_all_jobs(background_tasks: BackgroundTasks, authorized: bool = Depends(check_auth)):
+@limiter.limit("5/minute")
+async def run_all_jobs(request: Request, background_tasks: BackgroundTasks, authorized: bool = Depends(check_auth)):
     if not scheduler_service:
         return {"message": "Scheduler not initialized.", "status": "error"}
 
@@ -196,6 +233,7 @@ async def get_sonarr_folders(cfg: ServiceConfig, authorized: bool = Depends(chec
 
 def start_web_server():
     """Starts the Uvicorn server."""
-    # We must ensure we are in the correct directory or adjust paths
-    # Since main.py is in root, it should be fine.
-    uvicorn.run(app, host="0.0.0.0", port=9000)
+    # Support environment variable configuration for host/port
+    host = os.environ.get("MEDIATREND_HOST", "0.0.0.0")
+    port = int(os.environ.get("MEDIATREND_PORT", "9000"))
+    uvicorn.run(app, host=host, port=port)

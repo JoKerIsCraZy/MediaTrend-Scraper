@@ -123,14 +123,31 @@ def load_settings() -> Dict[str, Any]:
     if not os.path.exists(SETTINGS_FILE):
         defaults = get_default_settings()
         save_settings(defaults)
-        return defaults
+        config = defaults
+    else:
+        try:
+            with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
+                config = json.load(f)
+        except Exception as e:
+            menu.log_warn(f"Fehler beim Laden der Einstellungen: {e}")
+            config = get_default_settings()
     
-    try:
-        with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except Exception as e:
-        menu.log_warn(f"Fehler beim Laden der Einstellungen: {e}")
-        return get_default_settings()
+    # Apply environment variable overrides (maintain backward compatibility)
+    # These override config values but don't modify the file
+    if os.environ.get("MEDIATREND_TMDB_API_KEY"):
+        config["general"]["tmdb_api_key"] = os.environ["MEDIATREND_TMDB_API_KEY"]
+    if os.environ.get("MEDIATREND_RADARR_URL"):
+        config["radarr"]["url"] = os.environ["MEDIATREND_RADARR_URL"]
+    if os.environ.get("MEDIATREND_RADARR_API_KEY"):
+        config["radarr"]["api_key"] = os.environ["MEDIATREND_RADARR_API_KEY"]
+    if os.environ.get("MEDIATREND_SONARR_URL"):
+        config["sonarr"]["url"] = os.environ["MEDIATREND_SONARR_URL"]
+    if os.environ.get("MEDIATREND_SONARR_API_KEY"):
+        config["sonarr"]["api_key"] = os.environ["MEDIATREND_SONARR_API_KEY"]
+    if os.environ.get("MEDIATREND_AUTH_ENABLED"):
+        config["auth"]["enabled"] = os.environ["MEDIATREND_AUTH_ENABLED"].lower() == "true"
+    
+    return config
 
 def save_settings(data: Dict[str, Any]) -> None:
     """Speichert die Einstellungen in die JSON-Datei."""

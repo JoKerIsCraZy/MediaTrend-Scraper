@@ -2,22 +2,31 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Installiere System-Abhängigkeiten (für lxml, etc.)
-# Chrome/Selenium braucht mehr Setup, aber wir verwenden headless Chrome
-# Für Docker ist es oft einfacher, Selenium Grid zu nutzen oder Chromium zu installieren.
-# Wir installieren Chromium für Selenium.
+# Install system dependencies (for lxml, etc.)
+# Chromium for Selenium headless browser
 RUN apt-get update && apt-get install -y \
     chromium \
     chromium-driver \
     && rm -rf /var/lib/apt/lists/*
 
+# Create non-root user for security
+RUN useradd -m -u 1000 -s /bin/bash appuser
+
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . .
+# Copy application files and set ownership
+COPY --chown=appuser:appuser . .
 
-# Port für Web UI
+# Switch to non-root user
+USER appuser
+
+# Port for Web UI
 EXPOSE 9000
 
-# Startbefehl
+# Environment variables (can be overridden)
+ENV MEDIATREND_HOST=0.0.0.0
+ENV MEDIATREND_PORT=9000
+
+# Start command
 CMD ["python", "main.py"]
