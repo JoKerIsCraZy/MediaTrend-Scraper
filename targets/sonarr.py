@@ -40,6 +40,11 @@ async def sonarr_get_root_folders(sonarr_url: str, sonarr_token: str) -> List[st
     data = await _get_api(sonarr_url, sonarr_token, "rootfolder")
     return [f.get("path") for f in data if f.get("path")] if data else []
 
+async def sonarr_lookup_existing(sonarr_url: str, sonarr_token: str) -> Dict[int, Any]:
+    """Fetches all series from Sonarr and returns a dict {tvdbId: series}."""
+    data = await _get_api(sonarr_url, sonarr_token, "series")
+    return {int(s.get("tvdbId")): s for s in data if s.get("tvdbId")} if data else {}
+
 async def sonarr_lookup_series(config: Dict[str, Any], tvdb_id: int) -> Optional[Dict[str, Any]]:
     """
     Searches for a new series by its TVDb ID.
