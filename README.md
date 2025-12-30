@@ -1,111 +1,190 @@
-# MediaTrend Scraper
+<p align="center">
+  <img src="docs/logo.svg" alt="MediaTrend Scraper" width="80">
+</p>
 
-A powerful tool to scrape Top 10 lists from various streaming services (Netflix, Disney+, Amazon Prime, etc.) and automatically add these media items to Radarr and Sonarr.
+<h1 align="center">MediaTrend Scraper</h1>
 
-## Features
+<p align="center">
+  <strong>Automatically add trending movies and series to your Radarr & Sonarr library</strong>
+</p>
 
-- **Multi-Source Scraping**: Scrapes Top 10 lists from a wide range of streaming services via Netflix API and FlixPatrol:
-  - **Global Players**: Netflix, Amazon Prime, Disney+, HBO Max, Hulu, Peacock, Paramount+, Apple TV+
-  - **Specialized**: Discovery+, Star+, Rakuten TV, Google Play, Crunchyroll
-  - **European/Regional**: BBC iPlayer, Joyn, RTL+, Sky, Canal+
-- **Radarr & Sonarr Integration**: Automatically adds found movies and series to your media library.
-- **Web Interface**: Modern dashboard to manage settings, view logs, and trigger manual runs.
-- **CLI Mode**: Interactive command-line interface for quick tasks.
-- **Scheduler**: Granular scheduling for each platform and media type (Movies/Series).
-- **Docker Support**: Easy deployment using Docker and Docker Compose.
+<p align="center">
+  <a href="#features">Features</a> •
+  <a href="#screenshots">Screenshots</a> •
+  <a href="#installation">Installation</a> •
+  <a href="#configuration">Configuration</a> •
+  <a href="#supported-platforms">Platforms</a>
+</p>
 
-## Web Interface
+---
 
-The web interface provides a modern dashboard to manage your settings, view logs, and trigger manual runs.
+## ✨ Features
 
-![Web Interface Dashboard](webui_screenshot.png)
+| Feature                            | Description                                           |
+| ---------------------------------- | ----------------------------------------------------- |
+| 🎬 **Multi-Platform Scraping**     | Scrapes Top 10 lists from 18+ streaming services      |
+| 🎯 **Radarr & Sonarr Integration** | Automatically adds movies and series to your library  |
+| 🌐 **Modern Web Interface**        | Beautiful dark-mode dashboard with real-time logs     |
+| ⏰ **Scheduler**                   | Set custom schedules for each platform and media type |
+| 🔢 **Configurable Top Count**      | Choose Top 3, 5, or 10 titles to scrape               |
+| 🔒 **Authentication**              | Secure your instance with basic authentication        |
+| 🐳 **Docker Support**              | One-command deployment with Docker Compose            |
 
-## CLI Mode
+---
 
-For users who prefer the terminal, the application offers an interactive CLI mode.
+## 📸 Screenshots
 
-**Usage:**
+### Dashboard
 
-```bash
-python main.py --cli
-```
+The modern dashboard provides quick access to all streaming platforms with one-click scraping.
 
-**Example Output:**
-![CLI Mode Example](cli_screenshot.png)
+![Dashboard](docs/dashboard.png)
 
-## Installation & Usage
+### Settings
+
+Configure your TMDb API key, Radarr/Sonarr connections, countries, and scheduling preferences.
+
+![Settings](docs/settings.png)
+
+---
+
+## 🚀 Installation
 
 ### Option 1: Docker (Recommended)
 
-The easiest way to run the scraper is using Docker.
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/MediaTrend-Scraper.git
+cd MediaTrend-Scraper
 
-1.  **Prerequisites**: Ensure Docker and Docker Compose are installed.
-2.  **Configuration**:
-    - The `settings.json` file is automatically mounted in the container. You can edit this file locally to adjust your API keys and settings.
-    - Ensure the `settings.json` file is in the same directory as `docker-compose.yml`.
-3.  **Start**:
-    Open a terminal in the project folder and run the following command:
-    ```bash
-    docker-compose up -d --build
-    ```
-4.  **Access**:
-    The web interface is now accessible at `http://localhost:9000`.
+# Start with Docker Compose
+docker-compose up -d --build
+```
 
-### Option 2: Local Installation (Python)
+The web interface will be available at `http://localhost:9000`
 
-1.  **Prerequisites**: Python 3.11 or higher and Google Chrome (for Selenium).
-2.  **Install Dependencies**:
-    ```bash
-    pip install -r requirements.txt
-    ```
-3.  **Start Web Interface**:
+### Option 2: Manual Installation
 
-    ```bash
-    python main.py
-    ```
+**Prerequisites:**
 
-    Access at `http://localhost:9000`.
+- Python 3.11+
+- Google Chrome (for Selenium scraping)
 
-4.  **Start CLI Mode**:
-    ```bash
-    python main.py --cli
-    ```
+```bash
+# Install dependencies
+pip install -r requirements.txt
 
-## Configuration
+# Start the web server
+python main.py
 
-Configuration is done via the `settings.json` file or conveniently via the web interface.
+# Or use CLI mode
+python main.py --cli
+```
 
-### Important Settings:
+---
 
-- **Radarr/Sonarr**: URL and API Key are required to add media.
-- **Sources**: Enable/Disable individual sources (e.g., Netflix, Disney+).
-- **Countries**: Define for which countries lists should be fetched.
-  - **Supported Regions**: Global, USA, UK, DACH (DE, AT, CH), France, Italy, Spain, Canada, Australia.
-- **Authentication**: Secure the web interface with a username and password.
+## ⚙️ Configuration
 
-### Scheduler
+All settings can be configured via the web interface at `http://localhost:9000`.
 
-The scheduler allows you to define specific times for each job.
+### Required Settings
 
-- **Granularity**: Separate schedules for Movies and Series for each platform.
-- **Default**: Jobs are disabled by default and need to be enabled in the settings.
+| Setting                  | Description                                                                                        |
+| ------------------------ | -------------------------------------------------------------------------------------------------- |
+| **TMDb API Key**         | Required for matching titles. Get one at [themoviedb.org](https://www.themoviedb.org/settings/api) |
+| **Radarr URL & API Key** | Your Radarr instance (e.g., `http://localhost:7878`)                                               |
+| **Sonarr URL & API Key** | Your Sonarr instance (e.g., `http://localhost:8989`)                                               |
 
-### Authentication
+### Optional Settings
 
-Basic Authentication can be enabled to protect the web interface.
+| Setting            | Default    | Description                                      |
+| ------------------ | ---------- | ------------------------------------------------ |
+| **Top Count**      | 10         | Number of top titles to scrape (3, 5, or 10)     |
+| **Countries**      | DE, US, CH | Countries to scrape top lists from               |
+| **Search on Add**  | Enabled    | Automatically search for downloads when adding   |
+| **Authentication** | Disabled   | Protect the web interface with username/password |
 
-- **Default Username**: `admin`
-- **Default Password**: `password`
-- **Enable**: Go to Settings -> Authentication and check "Enable Basic Authentication".
-- **Note**: You must restart the application for authentication changes to take effect.
+---
 
-## Development
+## 🌍 Supported Platforms
 
-- `main.py`: Entry point of the application. Starts web server and scheduler.
-- `worker.py`: Contains the logic for processing scraping jobs.
-- `sources/`: Modules for the various data sources.
-- `targets/`: Modules for the target systems (Radarr, Sonarr).
+<table>
+<tr>
+<td>
 
-## License
+**Global Streaming**
 
-[MIT License](LICENSE)
+- Netflix
+- Amazon Prime
+- Disney+
+- HBO Max
+- Apple TV+
+- Paramount+
+
+</td>
+<td>
+
+**Regional Streaming**
+
+- Hulu (US)
+- Peacock (US)
+- BBC iPlayer (UK)
+- Joyn (DE)
+- RTL+ (DE)
+- Sky (EU)
+
+</td>
+<td>
+
+**Specialized**
+
+- Crunchyroll
+- Discovery+
+- Star+
+- Rakuten TV
+- Google Play
+- Canal+
+
+</td>
+</tr>
+</table>
+
+---
+
+## 📁 Project Structure
+
+```
+MediaTrend-Scraper/
+├── main.py           # Entry point
+├── worker.py         # Scraping logic
+├── scheduler.py      # Job scheduling
+├── settings.py       # Configuration management
+├── sources/          # Scraping modules
+│   ├── netflix.py
+│   └── flixpatrol.py
+├── targets/          # Media server integrations
+│   ├── radarr.py
+│   └── sonarr.py
+├── web/              # Web interface
+│   ├── app.py
+│   └── templates/
+└── docs/             # Documentation assets
+```
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+---
+
+## 📄 License
+
+This project is licensed under the [MIT License](LICENSE).
+
+---
+
+<p align="center">
+  Made with ❤️ for media enthusiasts
+</p>

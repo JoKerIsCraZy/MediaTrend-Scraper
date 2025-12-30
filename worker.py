@@ -97,11 +97,15 @@ async def process_media_list(
         titles = await fetch_titles_func(country)
         all_titles.update(titles)
     
-    menu.log(f"Found {len(all_titles)} unique titles in total.")
+    # Apply top_count limit
+    top_count = config["general"].get("top_count", 10)
+    all_titles_list = list(all_titles)[:top_count]
+    
+    menu.log(f"Found {len(all_titles)} unique titles, using top {top_count}.")
 
     # 4. Process and Send
     added_count = 0
-    for title in all_titles:
+    for title in all_titles_list:
         # 4a. TMDb Search
         tmdb_match = await tmdb_search(tmdb_key, title, media_type)
         if not tmdb_match or not tmdb_match.get("id"):
@@ -129,6 +133,23 @@ async def process_media_list(
             tvdb_id = await tmdb_get_tvdb_id(tmdb_key, tmdb_id)
             if not tvdb_id:
                 menu.log_warn(f"No TVDb ID found for '{title}' (TMDb: {tmdb_id}).")
+                continue
+            
+            if tvdb_id in existing_ids:
+                menu.log(f"'{title}' (TVDb: {tvdb_id}) is already in Sonarr. Skipping.")
+                continue
+            
+            # Lookup series in Sonarr to get full data
+            series_data = await sonarr.sonarr_lookup_series(config, tvdb_id)
+            if not series_data:
+                menu.log_warn(f"Could not find '{title}' (TVDb: {tvdb_id}) in Sonarr lookup.")
+                continue
+            
+            if await sonarr.sonarr_add_series(config, series_data):
+                added_count += 1
+                existing_ids[tvdb_id] = True
+    
+    menu.log(f"Finished {source_name} ({media_type.value}). Added {added_count} new entries.")
 
 def show_run_menu(config: Dict[str, Any]) -> None:
     """Shows the menu to execute jobs."""

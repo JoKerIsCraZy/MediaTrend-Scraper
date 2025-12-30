@@ -53,7 +53,8 @@ def get_default_settings() -> Dict[str, Any]:
     return {
         "general": {
             "tmdb_api_key": "",
-            "countries": ["DE", "US", "CH"] # Standardländer
+            "countries": ["DE", "US", "CH"], # Standardländer
+            "top_count": 10  # How many top items to scrape (3, 5, 10)
         },
         "auth": {
             "enabled": False,
