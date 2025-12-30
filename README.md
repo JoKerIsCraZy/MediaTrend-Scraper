@@ -50,20 +50,42 @@ Configure your TMDb API key, Radarr/Sonarr connections, countries, and schedulin
 
 ## 🚀 Installation
 
-### Option 1: Docker (Recommended)
+### Option 1: Docker Hub (Recommended)
 
 ```bash
-# Clone the repository
-git clone https://github.com/yourusername/MediaTrend-Scraper.git
-cd MediaTrend-Scraper
+# Pull and run with Docker
+docker run -d \
+  --name mediatrend-scraper \
+  -p 9000:9000 \
+  -v ./settings.json:/app/settings.json \
+  --restart unless-stopped \
+  jokeriscrazy/mediatrend-scraper:latest
+```
 
-# Start with Docker Compose
-docker-compose up -d --build
+Or use Docker Compose:
+
+```bash
+# Create a docker-compose.yml or download from repo
+curl -O https://raw.githubusercontent.com/jokeriscrazy/MediaTrend-Scraper/main/docker-compose.yml
+
+# Start the container
+docker-compose up -d
 ```
 
 The web interface will be available at `http://localhost:9000`
 
-### Option 2: Manual Installation
+### Option 2: Build from Source
+
+```bash
+# Clone the repository
+git clone https://github.com/jokeriscrazy/MediaTrend-Scraper.git
+cd MediaTrend-Scraper
+
+# Build and start with Docker Compose
+docker-compose up -d --build
+```
+
+### Option 3: Manual Installation
 
 **Prerequisites:**
 

@@ -1,0 +1,50 @@
+# Git
+.git
+.gitignore
+.github
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info
+.eggs
+*.egg
+.pytest_cache
+.coverage
+htmlcov
+
+# Virtual Environment
+venv
+env
+.venv
+.env
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Documentation & Screenshots
+docs/
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+README.md
+LICENSE
+
+# Docker
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# Tests
+tests/
+
+# Local config (will be mounted as volume)
+settings.json
