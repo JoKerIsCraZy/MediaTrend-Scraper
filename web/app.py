@@ -53,13 +53,55 @@ utils.menu.log_error = lambda m: web_logger(f"[ERROR] {m}")
 
 import secrets
 from utils.password import verify_password, hash_password, needs_rehash
+from datetime import datetime, timedelta
+from collections import defaultdict
 
-def check_auth(credentials: HTTPBasicCredentials = Depends(security)):
+# Brute-force protection: track failed login attempts per IP
+LOGIN_ATTEMPTS = defaultdict(list)  # IP -> list of timestamps
+MAX_FAILED_ATTEMPTS = 5
+LOCKOUT_DURATION = timedelta(minutes=15)
+
+
+def get_client_ip(request) -> str:
+    """Get client IP from request, handling proxies."""
+    forwarded = request.headers.get("X-Forwarded-For")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
+def is_ip_locked(ip: str) -> bool:
+    """Check if an IP is locked out due to too many failed attempts."""
+    now = datetime.now()
+    # Clean old attempts
+    LOGIN_ATTEMPTS[ip] = [t for t in LOGIN_ATTEMPTS[ip] if now - t < LOCKOUT_DURATION]
+    return len(LOGIN_ATTEMPTS[ip]) >= MAX_FAILED_ATTEMPTS
+
+
+def record_failed_attempt(ip: str):
+    """Record a failed login attempt for an IP."""
+    LOGIN_ATTEMPTS[ip].append(datetime.now())
+
+
+def clear_failed_attempts(ip: str):
+    """Clear failed attempts after successful login."""
+    LOGIN_ATTEMPTS[ip] = []
+
+
+def check_auth(request: Request, credentials: HTTPBasicCredentials = Depends(security)):
     """Checks the credentials if authentication is enabled."""
-    global config
-    
     if not config or not config.get("auth", {}).get("enabled", False):
         return True
+
+    client_ip = get_client_ip(request)
+    
+    # Check if IP is locked out
+    if is_ip_locked(client_ip):
+        web_logger(f"[SECURITY] Blocked login attempt from locked IP: {client_ip}")
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"Too many failed attempts. Try again in {LOCKOUT_DURATION.seconds // 60} minutes.",
+        )
 
     if not credentials:
         raise HTTPException(
@@ -79,11 +121,17 @@ def check_auth(credentials: HTTPBasicCredentials = Depends(security)):
     password_match = verify_password(credentials.password, correct_password)
     
     if not (username_match and password_match):
+        record_failed_attempt(client_ip)
+        remaining = MAX_FAILED_ATTEMPTS - len(LOGIN_ATTEMPTS[client_ip])
+        web_logger(f"[SECURITY] Failed login from {client_ip}. {remaining} attempts remaining.")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Basic"},
         )
+    
+    # Successful login - clear failed attempts
+    clear_failed_attempts(client_ip)
     
     # Auto-migrate plaintext password to bcrypt hash on successful login
     if password_match and needs_rehash(config["auth"]["password"]) and not os.environ.get("MEDIATREND_AUTH_PASSWORD"):
