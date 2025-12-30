@@ -1,5 +1,5 @@
 # Core HTTP
-requests==2.31.0
+requests==2.32.4
 aiohttp==3.9.1
 
 # Web Framework
