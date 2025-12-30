@@ -7,6 +7,7 @@ from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 import uvicorn
+import logging
 
 import settings
 from scheduler import SchedulerService
@@ -160,8 +161,9 @@ async def get_radarr_profiles(cfg: ServiceConfig, authorized: bool = Depends(che
     try:
         profiles = await radarr.radarr_get_quality_profiles(cfg.url, cfg.api_key)
         return profiles
-    except Exception as e:
-        return {"error": str(e)}
+    except Exception:
+        logging.exception("Failed to fetch Radarr quality profiles")
+        return {"error": "Failed to fetch Radarr quality profiles."}
 
 @app.post("/api/radarr/folders")
 async def get_radarr_folders(cfg: ServiceConfig, authorized: bool = Depends(check_auth)):
@@ -169,24 +171,27 @@ async def get_radarr_folders(cfg: ServiceConfig, authorized: bool = Depends(chec
         folders = await radarr.radarr_get_root_folders(cfg.url, cfg.api_key)
         # Radarr returns strings, we convert to objects for consistency
         return [{"path": f} for f in folders]
-    except Exception as e:
-        return {"error": str(e)}
+    except Exception:
+        logging.exception("Failed to fetch Radarr root folders")
+        return {"error": "Failed to fetch Radarr root folders."}
 
 @app.post("/api/sonarr/profiles")
 async def get_sonarr_profiles(cfg: ServiceConfig, authorized: bool = Depends(check_auth)):
     try:
         profiles = await sonarr.sonarr_get_quality_profiles(cfg.url, cfg.api_key)
         return profiles
-    except Exception as e:
-        return {"error": str(e)}
+    except Exception:
+        logging.exception("Failed to fetch Sonarr quality profiles")
+        return {"error": "Failed to fetch Sonarr quality profiles."}
 
 @app.post("/api/sonarr/folders")
 async def get_sonarr_folders(cfg: ServiceConfig, authorized: bool = Depends(check_auth)):
     try:
         folders = await sonarr.sonarr_get_root_folders(cfg.url, cfg.api_key)
         return [{"path": f} for f in folders]
-    except Exception as e:
-        return {"error": str(e)}
+    except Exception:
+        logging.exception("Failed to fetch Sonarr root folders")
+        return {"error": "Failed to fetch Sonarr root folders."}
 
 
 def start_web_server():
