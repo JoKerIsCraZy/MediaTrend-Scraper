@@ -9,7 +9,7 @@ from utils.types import MediaType
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service as ChromeService
 from selenium.webdriver.chrome.options import Options as ChromeOptions
-from webdriver_manager.chrome import ChromeDriverManager
+# from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
@@ -48,8 +48,9 @@ def _get_flixpatrol_html_with_selenium(service_slug: str, country_code: str, med
         options.add_argument("--log-level=3") 
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage") 
-
-        service = ChromeService(ChromeDriverManager().install())
+        
+        # Use system installed chromedriver instead of downloading mismatching version
+        service = ChromeService("/usr/bin/chromedriver")
         driver = webdriver.Chrome(service=service, options=options)
         
         driver.get(url)
