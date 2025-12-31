@@ -1,7 +1,7 @@
-version: '3.8'
-
 services:
   mediatrend-scraper:
+    # Build from local source to apply permission fixes
+    build: .
     image: jokeriscrazy/mediatrend-scraper:latest
     container_name: mediatrend-scraper
     ports:
