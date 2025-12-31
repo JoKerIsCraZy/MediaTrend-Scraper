@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import json
 import os
+import tempfile
 from typing import Any, Dict, List
 
 # Importiert die API-Funktionen von unseren Zielen
@@ -154,13 +155,15 @@ import shutil
 def save_settings(data: Dict[str, Any]) -> None:
     """Speichert die Einstellungen in die JSON-Datei."""
     try:
-        tmp = SETTINGS_FILE + ".tmp"
-        with open(tmp, "w", encoding="utf-8") as f:
+        # Use system temp directory to avoid permission issues in /app
+        fd, tmp_path = tempfile.mkstemp(prefix="settings_", suffix=".tmp", text=True)
+        
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
         
         # Override file content instead of replacing the inode (keeps docker bind-mounts alive)
-        shutil.copyfile(tmp, SETTINGS_FILE)
-        os.remove(tmp)
+        shutil.copyfile(tmp_path, SETTINGS_FILE)
+        os.remove(tmp_path)
         
         menu.log("Einstellungen gespeichert.")
     except Exception as e:

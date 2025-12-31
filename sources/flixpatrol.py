@@ -48,6 +48,8 @@ def _get_flixpatrol_html_with_selenium(service_slug: str, country_code: str, med
         options.add_argument("--log-level=3") 
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage") 
+
+        options.add_argument("--disable-dev-shm-usage") 
         
         # Use system installed chromedriver instead of downloading mismatching version
         service = ChromeService("/usr/bin/chromedriver")
