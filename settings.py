@@ -149,13 +149,19 @@ def load_settings() -> Dict[str, Any]:
     
     return config
 
+import shutil
+
 def save_settings(data: Dict[str, Any]) -> None:
     """Speichert die Einstellungen in die JSON-Datei."""
     try:
         tmp = SETTINGS_FILE + ".tmp"
         with open(tmp, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
-        os.replace(tmp, SETTINGS_FILE)
+        
+        # Override file content instead of replacing the inode (keeps docker bind-mounts alive)
+        shutil.copyfile(tmp, SETTINGS_FILE)
+        os.remove(tmp)
+        
         menu.log("Einstellungen gespeichert.")
     except Exception as e:
         menu.log_warn(f"Speichern der Einstellungen fehlgeschlagen: {e}")

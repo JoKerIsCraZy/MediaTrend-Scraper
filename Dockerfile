@@ -18,6 +18,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application files and set ownership
 COPY --chown=appuser:appuser . .
 
+# Ensure the appuser has write permissions to the directory (important for creating .tmp files)
+RUN chown -R appuser:appuser /app
+
 # Switch to non-root user
 USER appuser
 
