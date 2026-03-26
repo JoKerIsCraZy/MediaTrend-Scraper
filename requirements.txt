@@ -1,6 +1,6 @@
 # Core HTTP
-requests==2.32.4
-aiohttp==3.12.14
+requests==2.33.0
+aiohttp==3.13.3
 
 # Web Framework
 fastapi==0.115.6
